@@ -161,7 +161,9 @@ class MyGUI(QDialog):
 
         minValSlider = QSlider(Qt.Vertical)
         maxValSlider = QSlider(Qt.Vertical)
-        maxValSlider.setValue(100)
+        maxValSlider.setValue(2**16-1)
+        maxValSlider.setMaximum(2**16-1)
+        minValSlider.setMaximum(2**16-1)
         canvas2D = Canvas2D(self, width=10, height=5)
 
         layout = QGridLayout()
@@ -234,12 +236,15 @@ class MyGUI(QDialog):
         print('TZC: ',t,z,c)
         img = self.stacks[t,z,c,...]
         self.widgets['groupCanvas2D'][2].image_shown.set_data(img)
-        self.updateBC()
         self.widgets['groupCanvas2D'][2].draw()
     
     def updateBC(self):
         vmin = int( self.widgets['groupCanvas2D'][0].value() )
         vmax = int( self.widgets['groupCanvas2D'][1].value() )
+
+        if self.widgets['groupCanvas2D'][0].value() >= self.widgets['groupCanvas2D'][1].value():
+            self.widgets['groupCanvas2D'][0].setValue(self.widgets['groupCanvas2D'][1].value()-1)
+            vmin = int( self.widgets['groupCanvas2D'][0].value() )
 
         self.widgets['groupCanvas2D'][2].image_shown.set_clim([vmin,vmax])
         self.widgets['groupCanvas2D'][2].draw()
