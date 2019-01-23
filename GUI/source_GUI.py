@@ -34,7 +34,7 @@ class Canvas2D(FigureCanvas):
  
     def plot(self,data):
         if data == []:
-            data = np.random.randint(0,2**16-1,(2,512,1024))
+            data = np.zeros((2,512,1024))
         cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
         cmap2._init() # create the _lut array, with rgba values
@@ -69,6 +69,9 @@ class Canvas3D(FigureCanvas):
         fig.subplots_adjust(left=0.,bottom=0.,right=1.,top=1.)
         self.axes.grid(False)
         self.setParent(parent)
+        self.axes.set_xlim(auto=True)
+        self.axes.set_ylim(auto=True)
+        self.axes.set_zlim(auto=True)
 
         FigureCanvas.setSizePolicy(self,
                 QSizePolicy.Expanding,
@@ -95,7 +98,7 @@ class MyGUI(QDialog):
         self.points_colors = ['#1f77b4','#ff7f0e','black','grey']
         self.points = { object_id: np.array([]) for object_id in self.points_id }
         self.file_name = ''
-        self.stacks = np.random.randint(0,2**16-1,(10,10,2,512,1024))
+        self.stacks = np.zeros((10,10,2,512,1024))
         self.channels = ['488nm', '561nm']
         self.widgets = {}
 
@@ -232,17 +235,16 @@ class MyGUI(QDialog):
         if new_file != '':
             self.setEnableState(True)
             self.file_name = new_file
-            self.stacks = self.loadStacks()
+            self.stacks, self._maxval = self.loadStacks()
 
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
             for i in range(self.stacks.shape[2]):
                 self.widgets['groupTZC'][i+3].setChecked(True)
+            for i in range(2):
+                self.widgets['groupTZC'][2].setCurrentIndex(i)
+                self.updateBC()
             self.updateCanvas2D()
-            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[0,0,1,:,:])))
-            self.widgets['groupTZC'][2].setCurrentIndex(1)
-            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[0,0,0,:,:])))
-            self.widgets['groupTZC'][2].setCurrentIndex(0)
 
     def selectPointsFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
@@ -265,15 +267,15 @@ class MyGUI(QDialog):
     def loadStacks(self):
         print('#'*40)
         print('Loading dataset at:\n\t', self.file_name)
-        stack = imread(self.file_name)[:,:,::-1,:,:]
-        self._maxval = np.zeros((self.stacks.shape[0],self.stacks.shape[1],self.stacks.shape[2]))
-        for i in range(self.stacks.shape[0]):
-            for k in range(self.stacks.shape[1]):
-                for j in range(self.stacks.shape[2]):
-                    self._maxval[i,k,j] = np.percentile(self.stacks[i,k,j,:,:],10)
-        print('Stack shape (TZCHW):', stack.shape)
+        stacks = imread(self.file_name)
+        _maxval = np.zeros((stacks.shape[0],stacks.shape[1],stacks.shape[2]))
+        for i in range(stacks.shape[0]):
+            for k in range(stacks.shape[1]):
+                for j in range(stacks.shape[2]):
+                    _maxval[i,k,j] = np.max(stacks[i,k,j,:,:])
+        print('Stack shape (TZCHW):', stacks.shape)
         print('Done')
-        return stack
+        return stacks, _maxval
 
     def setEnableState(self, state):
         self.groupObjectsControl.setEnabled(state)
@@ -305,19 +307,11 @@ class MyGUI(QDialog):
         colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
         for i, obj_id in enumerate( self.points_id ):
             p = self.points[obj_id]
-            self.widgets['groupCanvas3D'][0].lines[i].remove()
-            line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
-            self.widgets['groupCanvas3D'][0].lines[i] = line
+            if p.shape[0] != 0:
+                self.widgets['groupCanvas3D'][0].lines[i].remove()
+                line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
+                self.widgets['groupCanvas3D'][0].lines[i] = line
 
-        (_min, _max) = [ np.min([np.min(self.points[_id][:,0]) for _id in self.points_id])-1, 
-                            np.max([np.max(self.points[_id][:,0]) for _id in self.points_id])+1 ]
-        self.widgets['groupCanvas3D'][0].axes.set_xlim([_min,_max])
-        (_min, _max) = [ np.min([np.min(self.points[_id][:,1]) for _id in self.points_id])-1, 
-                            np.max([np.max(self.points[_id][:,1]) for _id in self.points_id])+1 ]
-        self.widgets['groupCanvas3D'][0].axes.set_ylim([_min,_max])
-        (_min, _max) = [ np.min([np.min(self.points[_id][:,2]) for _id in self.points_id])-1, 
-                            np.max([np.max(self.points[_id][:,2]) for _id in self.points_id])+1 ]
-        self.widgets['groupCanvas3D'][0].axes.set_zlim([_min,_max])
         self.widgets['groupCanvas3D'][0].draw()
 
     def updateBC(self):
