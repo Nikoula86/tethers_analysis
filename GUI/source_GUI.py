@@ -3,13 +3,16 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QFileDialog)
+        QVBoxLayout, QWidget, QFileDialog, QMessageBox,QErrorMessage)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from tifffile import imread
+from matplotlib.colors import LinearSegmentedColormap
+import pandas as pd
+import os, pickle
 
 class Canvas2D(FigureCanvas):
  
@@ -30,8 +33,21 @@ class Canvas2D(FigureCanvas):
  
     def plot(self,data):
         if data == []:
-            data = np.random.randint(0,2**16-1,(512,1024))
-        self.image_shown = self.axes.imshow(data, cmap='gray') 
+            data = np.random.randint(0,2**16-1,(2,512,1024))
+        cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
+        cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
+        cmap2._init() # create the _lut array, with rgba values
+        alphas = np.sqrt(np.linspace(0, 1., cmap2.N+3))
+        cmap2._lut[:,-1] = alphas
+        colors = [cmap1,cmap2] 
+        self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
+        colors = ['#1f77b4','#ff7f0e','white','gray']
+        ms = [5,5,5,5]
+        marker = ['x','x','o','o']
+        self.points_scatter = []
+        for i in range(4):
+            line, = self.axes.plot([],[],' ',color=colors[i],ms=ms[i],marker=marker[i])
+            self.points_scatter.append(line)
         # use self.widgets['groupCanvas2D'][2].image_shown.set_data(img); canvas2d.draw(); to update image
         self.axes.grid(False)
         self.axes.set_xticks([])
@@ -69,10 +85,10 @@ class MyGUI(QDialog):
 
         self.points_id = ['tether_Atrium','tether_Ventricle','AVCanal','Midline']
         self.points_colors = ['#1f77b4','#ff7f0e','black','grey']
-        self.points = { object_id:[] for object_id in self.points_id }
+        self.points = { object_id: np.array([]) for object_id in self.points_id }
         self.file_name = ''
-        self.stacks = []
-        self.channels = ['488nm', '561nm', 'LED']
+        self.stacks = np.random.randint(0,2**16-1,(10,10,2,512,1024))
+        self.channels = ['488nm', '561nm']
         self.widgets = {}
 
         self.createLoadSaveGroupBox()
@@ -133,18 +149,20 @@ class MyGUI(QDialog):
         TBox = QSpinBox(); TBox.setValue(0)
         TLabel = QLabel("&Contraction phase:"); TLabel.setBuddy(TBox)
         TBox.setKeyboardTracking(False)
-        TBox.valueChanged.connect(lambda: self.updateTZC('T'))
+        TBox.valueChanged.connect(self.updateCanvas2D)
 
         ZBox = QSpinBox(); ZBox.setValue(0)
         ZLabel = QLabel("&Z plane:"); ZLabel.setBuddy(ZBox)
         ZBox.setKeyboardTracking(False)
-        ZBox.valueChanged.connect(lambda: self.updateTZC('Z'))
+        ZBox.valueChanged.connect(self.updateCanvas2D)
 
         CBox = QComboBox(); CBox.addItems(self.channels)
         CLabel = QLabel("&Channel:"); CLabel.setBuddy(CBox)
-        CBox.currentIndexChanged.connect(lambda: self.updateTZC('C'))
+        CBox.currentIndexChanged.connect(self.updateBC)
         
         chBox = [ QCheckBox(ch) for ch in self.channels ]
+        [ box.stateChanged.connect(self.updateCanvas2D) for box in chBox ]
+        [ box.setCheckState(False) for box in chBox ]
 
         layout = QGridLayout()
         layout.addWidget(TLabel,0,0); layout.addWidget(TBox,0,1)
@@ -176,6 +194,7 @@ class MyGUI(QDialog):
 
         minValSlider.valueChanged.connect(self.updateBC)
         maxValSlider.valueChanged.connect(self.updateBC)
+        canvas2D.mpl_connect('button_press_event', self.mouseClick)
 
     def createCanvas3DGroupBox(self):
         self.groupCanvas3DBox = QGroupBox("")
@@ -191,22 +210,35 @@ class MyGUI(QDialog):
     #%%
     def selectFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
+        if new_file.split('.')[-1] not in ['tif','tiff']:
+            QMessageBox.warning(self,'Warning!','This is not a tif file!')
+            return
         if new_file != '':
+            self.setEnableState(True)
             self.file_name = new_file
             self.stacks = self.loadStacks()
+            print('0')
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
-            self.widgets['groupCanvas2D'][0].setMaximum(2**16-1)
-            self.widgets['groupCanvas2D'][1].setMaximum(2**16-1)
-            self.setEnableState(True)
+            for i in range(self.stacks.shape[2]):
+                self.widgets['groupTZC'][i+3].setChecked(True)
+            self.updateCanvas2D()
+            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[:,:,1,:,:])/2))
+            self.widgets['groupTZC'][2].setCurrentIndex(1)
+            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[:,:,0,:,:])/2))
+            self.widgets['groupTZC'][2].setCurrentIndex(0)
 
     def saveData(self):
-        if self.base_dir != '':
-            print('Saving data to:\n\t', self.base_dir)
+        if self.file_name != '':
+            print('Saving data to:\n\t', os.path.join(*self.file_name.split('.')[:-1])+'_points.p')
+            pickle.dump(self.points,open(os.path.join(*self.file_name.split('.')[:-1])+'_points.p','wb'))
+            # df = pd.DataFrame.from_dict(self.points)
+            # print(df.head())
+            # df.to_csv(os.path.join(*self.file_name.split('.')[:-1])+'_points.csv')
 
     def loadStacks(self):
         print(self.file_name)
-        stack = imread(self.file_name)
+        stack = imread(self.file_name)[:,:,::-1,:,:]
         print('#'*40)
         print('Loading dataset at:\n\t', self.file_name)
         print('Stack shape (TZCHW):', stack.shape)
@@ -220,25 +252,29 @@ class MyGUI(QDialog):
         self.groupCanvas3DBox.setEnabled(state)
         self.widgets['groupLoadSave'][1].setEnabled(state)        
 
-    def updateTZC(self,who):
-        if who=='T':
-            print('Changing time')
-        elif who=='Z':
-            print('Changing Z plane')
-        elif who=='C':
-            print('Changing channel')
-        self.updateCanvas2D()
-
     def updateCanvas2D(self):
         t = int( self.widgets['groupTZC'][0].value() )
         z = int( self.widgets['groupTZC'][1].value() )
-        c = int( self.widgets['groupTZC'][2].currentIndex() )
-        print('TZC: ',t,z,c)
-        img = self.stacks[t,z,c,...]
-        self.widgets['groupCanvas2D'][2].image_shown.set_data(img)
+        # print('Current TZC: ',t,z)
+
+        show_one=False
+        for i, b in enumerate( self.widgets['groupTZC'][3:] ):
+            if b.checkState():
+                show_one = True
+                self.widgets['groupCanvas2D'][2].images_shown[i].set_data(self.stacks[t,z,i])
+            else:
+                self.widgets['groupCanvas2D'][2].images_shown[i].set_data(self.stacks[t,z,i]*0)
+
         self.widgets['groupCanvas2D'][2].draw()
-    
+        self.updateScatter()
+
     def updateBC(self):
+        c = int( self.widgets['groupTZC'][2].currentIndex() )
+
+        _maxval = np.max(self.stacks[:,:,c,:,:])
+        self.widgets['groupCanvas2D'][0].setMaximum(_maxval)
+        self.widgets['groupCanvas2D'][1].setMaximum(_maxval)
+
         vmin = int( self.widgets['groupCanvas2D'][0].value() )
         vmax = int( self.widgets['groupCanvas2D'][1].value() )
 
@@ -246,8 +282,43 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][0].setValue(self.widgets['groupCanvas2D'][1].value()-1)
             vmin = int( self.widgets['groupCanvas2D'][0].value() )
 
-        self.widgets['groupCanvas2D'][2].image_shown.set_clim([vmin,vmax])
+        self.widgets['groupCanvas2D'][2].images_shown[c].set_clim([vmin,vmax])
         self.widgets['groupCanvas2D'][2].draw()
+
+    def updateScatter(self):
+        t = int( self.widgets['groupTZC'][0].value() )
+        z = int( self.widgets['groupTZC'][1].value() )
+
+        for i, obj_id in enumerate(self.points_id):
+            ps = self.points[obj_id]
+            if ps.shape[0]!=0:
+                ps = ps[ps[:,2].astype(np.uint16)==z,:]
+                ps = ps[ps[:,3].astype(np.uint16)==t,:]
+                self.widgets['groupCanvas2D'][2].points_scatter[i].set_data(ps[:,0],ps[:,1])
+            else:
+                self.widgets['groupCanvas2D'][2].points_scatter[i].set_data([],[])
+
+        self.widgets['groupCanvas2D'][2].draw()
+
+    def mouseClick(self, event):
+        # print('Mouse clicked! ', event)
+        obj_id = self.widgets['groupObjects'][0].currentText()
+        c = np.array([np.rint(event.xdata),np.rint(event.ydata),self.widgets['groupTZC'][1].value(),self.widgets['groupTZC'][0].value()])
+        if event.button == 1:
+            if self.points[obj_id].shape[0]!=0:
+                self.points[obj_id] = np.append(self.points[obj_id],np.array([c]),axis=0)
+            else:
+                self.points[obj_id] = np.array([c])
+        if event.button == 3:
+            print(self.points[obj_id])
+            print(self.points[obj_id].shape)
+            if self.points[obj_id].shape[0] != 0:
+                dist = [ np.linalg.norm(c[:3]-c1) for c1 in self.points[obj_id][:,:3] ]
+                i = np.where(dist==np.min(dist))[0]
+                self.points[obj_id] = np.delete(self.points[obj_id], i, axis=0)
+            print(self.points[obj_id])
+            print(self.points[obj_id].shape)
+        self.updateScatter()
 
 if __name__ == '__main__':
 
