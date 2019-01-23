@@ -37,7 +37,7 @@ class Canvas2D(FigureCanvas):
         cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
         cmap2._init() # create the _lut array, with rgba values
-        alphas = np.sqrt(np.linspace(0, 1., cmap2.N+3))
+        alphas = np.linspace(0, 1., cmap2.N+3)
         cmap2._lut[:,-1] = alphas
         colors = [cmap1,cmap2] 
         self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
@@ -220,6 +220,9 @@ class MyGUI(QDialog):
             if os.path.exists(os.path.join(*self.file_name.split('.')[:-1])+'_points.p'):
                 print('Good news! You clicked on this dataset already')
                 self.points = pickle.load(open(os.path.join(*self.file_name.split('.')[:-1])+'_points.p','rb'))
+            else:
+                print('First time you look at this dataset. New points object created')
+                self.points = { object_id: np.array([]) for object_id in self.points_id }
 
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
@@ -242,6 +245,11 @@ class MyGUI(QDialog):
     def loadStacks(self):
         print(self.file_name)
         stack = imread(self.file_name)[:,:,::-1,:,:]
+        self._maxval = np.zeros((self.stacks.shape[0],self.stacks.shape[1],self.stacks.shape[2]))
+        for i in range(self.stacks.shape[0]):
+            for k in range(self.stacks.shape[1]):
+                for j in range(self.stacks.shape[2]):
+                    self._maxval[i,k,j] = np.percentile(self.stacks[i,k,j,:,:],10)
         print('#'*40)
         print('Loading dataset at:\n\t', self.file_name)
         print('Stack shape (TZCHW):', stack.shape)
@@ -272,11 +280,12 @@ class MyGUI(QDialog):
         self.updateScatter()
 
     def updateBC(self):
+        t = int( self.widgets['groupTZC'][0].value() )
+        z = int( self.widgets['groupTZC'][1].value() )
         c = int( self.widgets['groupTZC'][2].currentIndex() )
 
-        _maxval = np.max(self.stacks[:,:,c,:,:])
-        self.widgets['groupCanvas2D'][0].setMaximum(_maxval)
-        self.widgets['groupCanvas2D'][1].setMaximum(_maxval)
+        self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[t,z,c])
+        self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[t,z,c])
 
         vmin = int( self.widgets['groupCanvas2D'][0].value() )
         vmax = int( self.widgets['groupCanvas2D'][1].value() )
