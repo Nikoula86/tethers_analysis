@@ -17,6 +17,7 @@ import os, pickle
 class Canvas2D(FigureCanvas):
  
     def __init__(self, parent=None, width=10, height=5, dpi=100, data = []):
+        plt.style.use('dark_background')
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         fig.subplots_adjust(left=0.,bottom=0.,right=1.,top=1.)
@@ -41,13 +42,15 @@ class Canvas2D(FigureCanvas):
         cmap2._lut[:,-1] = alphas
         colors = [cmap1,cmap2] 
         self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
-        colors = ['#1f77b4','#ff7f0e','white','gray']
+
+        colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
         ms = [5,5,5,5]
-        marker = ['x','x','o','o']
+        marker = ['o','o','o','o']
         self.points_scatter = []
         for i in range(4):
             line, = self.axes.plot([],[],' ',color=colors[i],ms=ms[i],marker=marker[i])
             self.points_scatter.append(line)
+
         # use self.widgets['groupCanvas2D'][2].image_shown.set_data(img); canvas2d.draw(); to update image
         self.axes.grid(False)
         self.axes.set_xticks([])
@@ -58,12 +61,15 @@ class Canvas2D(FigureCanvas):
 class Canvas3D(FigureCanvas):
  
     def __init__(self, parent=None, width=5, height=4, dpi=100,data=[]):
+        plt.style.use('dark_background')
         fig = Figure(figsize=(width, height), dpi=dpi)
  
         FigureCanvas.__init__(self, fig)
         self.axes = self.figure.add_subplot(111, projection='3d')
+        fig.subplots_adjust(left=0.,bottom=0.,right=1.,top=1.)
+        self.axes.grid(False)
         self.setParent(parent)
- 
+
         FigureCanvas.setSizePolicy(self,
                 QSizePolicy.Expanding,
                 QSizePolicy.Expanding)
@@ -72,11 +78,13 @@ class Canvas3D(FigureCanvas):
  
  
     def plot(self,data):
-        if data == []:
-            x = np.linspace(0,10,100)
-            y = np.sin(x)*np.cos(x)
-            z = (x**2+y**2)/100+np.cos(x)*np.sin(y)
-        self.lines, = self.axes.plot(x,y,z, '-')
+        ms = [5,5,5,5]
+        ls = [' x', ' x', ' o', '-o']
+        colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
+        self.lines = []
+        for i in range(4):
+            line, = self.axes.plot([],[],[], ls[i],ms=ms[i],color=colors[i])
+            self.lines.append( line )
         self.draw()
 
 class MyGUI(QDialog):
@@ -113,21 +121,26 @@ class MyGUI(QDialog):
     def createLoadSaveGroupBox(self):
         self.groupLoadSave = QGroupBox("")
         
-        loadButton = QPushButton("Load data")
-        loadButton.setFocusPolicy(Qt.NoFocus)
-        loadButton.clicked.connect(self.selectFile)
+        loadImageButton = QPushButton("Load Image data")
+        loadImageButton.setFocusPolicy(Qt.NoFocus)
+        loadImageButton.clicked.connect(self.selectImageFile)
+
+        loadPointsButton = QPushButton("Load Points data")
+        loadPointsButton.setFocusPolicy(Qt.NoFocus)
+        loadPointsButton.clicked.connect(self.selectPointsFile)
 
         saveButton = QPushButton("Save data")
         saveButton.setFocusPolicy(Qt.NoFocus)
         saveButton.clicked.connect(self.saveData)
 
         layout = QHBoxLayout()
-        layout.addWidget(loadButton)
+        layout.addWidget(loadImageButton)
+        layout.addWidget(loadPointsButton)
         layout.addWidget(saveButton)
 
         self.groupLoadSave.setLayout(layout)
         self.groupLoadSave.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.widgets['groupLoadSave'] = [loadButton,saveButton]
+        self.widgets['groupLoadSave'] = [loadImageButton,loadPointsButton,saveButton]
 
     def createObjectsControlGroupBox(self):
         self.groupObjectsControl = QGroupBox("")
@@ -199,16 +212,19 @@ class MyGUI(QDialog):
     def createCanvas3DGroupBox(self):
         self.groupCanvas3DBox = QGroupBox("")
 
-        canvas3D = Canvas3D(self, width=5, height=5)
+        canvas3D = Canvas3D(self, width=2, height=2)
 
         layout = QGridLayout()
-        layout.addWidget(canvas3D,0,0,6,6)
+        layout.addWidget(canvas3D,0,0)
 
+        sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
+        self.groupCanvas3DBox.heightForWidth(1)
+        canvas3D.setSizePolicy(sp)
         self.groupCanvas3DBox.setLayout(layout)
         self.widgets['groupCanvas3D'] = [canvas3D]
 
     #%%
-    def selectFile(self):
+    def selectImageFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
         if new_file.split('.')[-1] not in ['tif','tiff']:
             QMessageBox.warning(self,'Warning!','This is not a tif file!')
@@ -217,43 +233,46 @@ class MyGUI(QDialog):
             self.setEnableState(True)
             self.file_name = new_file
             self.stacks = self.loadStacks()
-            if os.path.exists(os.path.join(*self.file_name.split('.')[:-1])+'_points.p'):
-                print('Good news! You clicked on this dataset already')
-                self.points = pickle.load(open(os.path.join(*self.file_name.split('.')[:-1])+'_points.p','rb'))
-            else:
-                print('First time you look at this dataset. New points object created')
-                self.points = { object_id: np.array([]) for object_id in self.points_id }
 
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
             for i in range(self.stacks.shape[2]):
                 self.widgets['groupTZC'][i+3].setChecked(True)
             self.updateCanvas2D()
-            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[:,:,1,:,:])/2))
+            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[0,0,1,:,:])))
             self.widgets['groupTZC'][2].setCurrentIndex(1)
-            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[:,:,0,:,:])/2))
+            self.widgets['groupCanvas2D'][1].setValue(int(np.max(self.stacks[0,0,0,:,:])))
             self.widgets['groupTZC'][2].setCurrentIndex(0)
+
+    def selectPointsFile(self):
+        new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
+        if new_file.split('.')[-1] not in ['p','pickle']:
+            QMessageBox.warning(self,'Warning!','This is not an invalid points file!')
+            return
+        if new_file != '':
+            self.points = pickle.load(open(new_file,'rb'))
+            self.updateScatter()
+            self.updateCanvas3D()
 
     def saveData(self):
         if self.file_name != '':
-            print('Saving data to:\n\t', os.path.join(*self.file_name.split('.')[:-1])+'_points.p')
-            pickle.dump(self.points,open(os.path.join(*self.file_name.split('.')[:-1])+'_points.p','wb'))
-            # df = pd.DataFrame.from_dict(self.points)
-            # print(df.head())
-            # df.to_csv(os.path.join(*self.file_name.split('.')[:-1])+'_points.csv')
+            save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
+            print('#'*40)
+            print('Saving data to:\n\t', save_file_name)
+            pickle.dump(self.points,open(save_file_name,'wb'))
+            print('Done')
 
     def loadStacks(self):
-        print(self.file_name)
+        print('#'*40)
+        print('Loading dataset at:\n\t', self.file_name)
         stack = imread(self.file_name)[:,:,::-1,:,:]
         self._maxval = np.zeros((self.stacks.shape[0],self.stacks.shape[1],self.stacks.shape[2]))
         for i in range(self.stacks.shape[0]):
             for k in range(self.stacks.shape[1]):
                 for j in range(self.stacks.shape[2]):
                     self._maxval[i,k,j] = np.percentile(self.stacks[i,k,j,:,:],10)
-        print('#'*40)
-        print('Loading dataset at:\n\t', self.file_name)
         print('Stack shape (TZCHW):', stack.shape)
-        print('#'*40)
+        print('Done')
         return stack
 
     def setEnableState(self, state):
@@ -261,7 +280,8 @@ class MyGUI(QDialog):
         self.groupTZCControl.setEnabled(state)
         self.groupCanvas2DBox.setEnabled(state)
         self.groupCanvas3DBox.setEnabled(state)
-        self.widgets['groupLoadSave'][1].setEnabled(state)        
+        self.widgets['groupLoadSave'][1].setEnabled(state)       
+        self.widgets['groupLoadSave'][2].setEnabled(state)       
 
     def updateCanvas2D(self):
         t = int( self.widgets['groupTZC'][0].value() )
@@ -278,6 +298,27 @@ class MyGUI(QDialog):
 
         self.widgets['groupCanvas2D'][2].draw()
         self.updateScatter()
+
+    def updateCanvas3D(self):
+        ms = [5,5,5,5]
+        ls = [' o', ' o', ' o', '-o']
+        colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
+        for i, obj_id in enumerate( self.points_id ):
+            p = self.points[obj_id]
+            self.widgets['groupCanvas3D'][0].lines[i].remove()
+            line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
+            self.widgets['groupCanvas3D'][0].lines[i] = line
+
+        (_min, _max) = [ np.min([np.min(self.points[_id][:,0]) for _id in self.points_id])-1, 
+                            np.max([np.max(self.points[_id][:,0]) for _id in self.points_id])+1 ]
+        self.widgets['groupCanvas3D'][0].axes.set_xlim([_min,_max])
+        (_min, _max) = [ np.min([np.min(self.points[_id][:,1]) for _id in self.points_id])-1, 
+                            np.max([np.max(self.points[_id][:,1]) for _id in self.points_id])+1 ]
+        self.widgets['groupCanvas3D'][0].axes.set_ylim([_min,_max])
+        (_min, _max) = [ np.min([np.min(self.points[_id][:,2]) for _id in self.points_id])-1, 
+                            np.max([np.max(self.points[_id][:,2]) for _id in self.points_id])+1 ]
+        self.widgets['groupCanvas3D'][0].axes.set_zlim([_min,_max])
+        self.widgets['groupCanvas3D'][0].draw()
 
     def updateBC(self):
         t = int( self.widgets['groupTZC'][0].value() )
@@ -327,12 +368,13 @@ class MyGUI(QDialog):
                 i = np.where(dist==np.min(dist))[0]
                 self.points[obj_id] = np.delete(self.points[obj_id], i, axis=0)
         self.updateScatter()
+        self.updateCanvas3D()
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    import sys
+import sys
 
-    app = QApplication(sys.argv)
-    gallery = MyGUI()
-    gallery.show()
-    sys.exit(app.exec_()) 
+app = QApplication(sys.argv)
+gallery = MyGUI()
+gallery.show()
+sys.exit(app.exec_()) 
