@@ -359,17 +359,36 @@ class MyGUI(QDialog):
     def mouseClick(self, event):
         # print('Mouse clicked! ', event)
         obj_id = self.widgets['groupObjects'][0].currentText()
-        c = np.array([np.rint(event.xdata),np.rint(event.ydata),self.widgets['groupTZC'][1].value(),self.widgets['groupTZC'][0].value()])
+        t = int( self.widgets['groupTZC'][0].value() )
+        z = int( self.widgets['groupTZC'][1].value() )
+        c = np.array([np.rint(event.xdata),np.rint(event.ydata),z,t])
+        points = self.points[obj_id]
+        _idxs = np.arange(points.shape[0])
+
+        # LEFT CLICK: add point
         if event.button == 1:
-            if self.points[obj_id].shape[0]!=0:
+            if points.shape[0]!=0:
                 self.points[obj_id] = np.append(self.points[obj_id],np.array([c]),axis=0)
             else:
                 self.points[obj_id] = np.array([c])
+
+        # RIGHT CLICK: remove point from the same contraction phase and focal plane
         if event.button == 3:
-            if self.points[obj_id].shape[0] != 0:
-                dist = [ np.linalg.norm(c[:3]-c1) for c1 in self.points[obj_id][:,:3] ]
+            new_points = []
+            new_idxs = []
+            for i, p in enumerate(points): # filter only points in the same focal plane and contraction phase
+                if p[2] == c[2]: # same focal plane
+                    if p[3] == c[3]: # same contraction phase
+                        new_points.append(p) # save the poiont
+                        new_idxs.append(i)   # save the original index
+            points = np.array(new_points)
+            _idxs = np.array(new_idxs)
+
+            # now find the closest point to the click and remove it
+            if len(_idxs) != 0:
+                dist = [ np.linalg.norm(c[:3]-c1) for c1 in points[:,:3] ]
                 i = np.where(dist==np.min(dist))[0]
-                self.points[obj_id] = np.delete(self.points[obj_id], i, axis=0)
+                self.points[obj_id] = np.delete(self.points[obj_id], _idxs[i], axis=0)
         self.updateScatter()
         self.updateCanvas3D()
 
