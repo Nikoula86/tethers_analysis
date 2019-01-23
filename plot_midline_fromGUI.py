@@ -232,7 +232,7 @@ class Tethers(object):
 
     #%% plot 2D coords
 
-    def plot_SAP_single_phase(self, phase = -1, figure = None, colors = ['#1f77b4', '#ff7f0e' ], ms=5):
+    def plot_SAP_single_phase(self, method = 'pt', phase = -1, figure = None, colors = ['#1f77b4', '#ff7f0e' ], ms=5):
         if phase==-1:
             phase = np.min(self.coords_anchors['Midline'][:,3])
         points_phase = self.filter_points_by_phase(self.coords_anchors,phase=phase)
@@ -261,24 +261,32 @@ class Tethers(object):
         plt.xlabel('Angle')
         plt.ylabel('Distance along the midline')
 
-    def plot_SAP_all_phases(self):
+    def plot_SAP_all_phases(self, color_code='phase_dep', method = 'pt'):
         phases = set(self.coords_anchors['Midline'][:,3])
 
         fig = plt.figure(figsize=(5,5))
-        plt.subplots_adjust(left=0.05,bottom=0.05,right=0.95,top=0.95)
+        plt.subplots_adjust(left=0.15,bottom=0.15,right=0.95,top=0.95)
         ax = fig.add_subplot(111)
+        ax.set_xlabel('Angle')
+        ax.set_ylabel('Distance along the midline (normalized)')
 
         # make color-coded by phase contraction
-        colors = [['#4477AA'],
-                  ['#4477AA','#CC6677'],
-                  ['#4477AA','#DDCC77','#CC6677'],
-                  ['#4477AA','#117733','#DDCC77','#CC6677'],
-                  ['#332288','#88CCEE','#117733','#DDCC77','#CC6677'],
-                  ['#332288','#88CCEE','#117733','#DDCC77','#CC6677','#AA4499']]
-        colors = colors[len(phases)-1]
+        if color_code == 'phase_dep':
+            colors = [['#4477AA'],
+                      ['#4477AA','#CC6677'],
+                      ['#4477AA','#DDCC77','#CC6677'],
+                      ['#4477AA','#117733','#DDCC77','#CC6677'],
+                      ['#332288','#88CCEE','#117733','#DDCC77','#CC6677'],
+                      ['#332288','#88CCEE','#117733','#DDCC77','#CC6677','#AA4499']]
+            colors = colors[len(phases)-1]
+            for i, ph in enumerate( phases ):
+                self.plot_SAP_single_phase(method = method, phase=ph, figure=(fig,ax), colors = [colors[i],colors[i]])
+        elif color_code == 'chamber_dep':
+            colors = [ ['#1f77b4', '#ff7f0e' ] for i in range(len(phases)) ]
+            for i, ph in enumerate( phases ):
+                self.plot_SAP_single_phase(method = method, phase=ph, figure=(fig,ax), colors = colors[i])
 
-        for i, ph in enumerate( phases ):
-            self.plot_SAP_single_phase(phase=ph, figure=(fig,ax), colors = [colors[i],colors[i]])
+        
        
     #%% coordinate system manipulation
     
@@ -345,13 +353,10 @@ The only input needed
 # midline.smooth_tube(sigma=5)
 # midline.extract_midline_coord_system()
 
-method = 'pt'
+method = 'fs'
 tethers = Tethers('test_unwrap_heart/5D_merged_points.p')
-tethers.extract_tethers2D_single_phase( method=method )
-
-tethers.plot_XYZ_single_phase(phase=0,xlim=(100,300),ylim=(0,200),method=method)
 tethers.plot_XYZ_all_phases(method=method)
-tethers.plot_SAP_all_phases()
+tethers.plot_SAP_all_phases(color_code='chamber_dep', method=method)
 
 plt.show()
 
