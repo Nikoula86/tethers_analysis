@@ -262,10 +262,11 @@ class MyGUI(QDialog):
     def saveData(self):
         if self.file_name != '':
             save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
-            print('#'*40)
-            print('Saving data to:\n\t', save_file_name)
-            pickle.dump(self.points,open(save_file_name,'wb'))
-            print('Done')
+            if save_file_name != '':
+                print('#'*40)
+                print('Saving data to:\n\t', save_file_name)
+                pickle.dump(self.points,open(save_file_name,'wb'))
+                print('Done')
 
     def loadStacks(self):
         print('#'*40)
