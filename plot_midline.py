@@ -419,9 +419,10 @@ midline = Midline('test_unwrap_heart/midline_49.txt')
 # midline.fix_outliers(idx=3)
 # midline.smooth_tube(sigma=5)
 
+method = 'pt'
 tethers = Tethers('test_unwrap_heart')
-tethers.project_tethers(midline, method='fs')
-tethers.plot_XYZ(xlim=(100,300),ylim=(0,200),plot_midline=True,midline=midline,method='fs')
+tethers.project_tethers(midline, method=method)
+tethers.plot_XYZ(xlim=(100,300),ylim=(0,200),plot_midline=True,midline=midline,method=method)
 
 plt.show()
 
