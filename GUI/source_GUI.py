@@ -239,6 +239,9 @@ class MyGUI(QDialog):
 
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
+            self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[0,0])
+            self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[0,0])
+            self.widgets['groupCanvas2D'][1].setValue(self._maxval[0,0])
             for i in range(self.stacks.shape[2]):
                 self.widgets['groupTZC'][i+3].setChecked(True)
             for i in range(2):
@@ -267,12 +270,11 @@ class MyGUI(QDialog):
     def loadStacks(self):
         print('#'*40)
         print('Loading dataset at:\n\t', self.file_name)
-        stacks = imread(self.file_name)
-        _maxval = np.zeros((stacks.shape[0],stacks.shape[1],stacks.shape[2]))
+        stacks = imread(self.file_name)[:,:,::-1,:,:]
+        _maxval = np.zeros((stacks.shape[0],stacks.shape[2]))
         for i in range(stacks.shape[0]):
-            for k in range(stacks.shape[1]):
-                for j in range(stacks.shape[2]):
-                    _maxval[i,k,j] = np.max(stacks[i,k,j,:,:])
+            for j in range(stacks.shape[2]):
+                _maxval[i,j] = np.max(stacks[i,:,j,:,:])
         print('Stack shape (TZCHW):', stacks.shape)
         print('Done')
         return stacks, _maxval
@@ -305,12 +307,18 @@ class MyGUI(QDialog):
         ms = [5,5,5,5]
         ls = [' o', ' o', ' o', '-o']
         colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
-        for i, obj_id in enumerate( self.points_id ):
-            p = self.points[obj_id]
-            if p.shape[0] != 0:
-                self.widgets['groupCanvas3D'][0].lines[i].remove()
-                line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
-                self.widgets['groupCanvas3D'][0].lines[i] = line
+        # remove all lines
+        [ l.remove() for l in self.widgets['groupCanvas3D'][0].lines ]
+        self.widgets['groupCanvas3D'][0].lines = []
+        for ph in range(self.stacks.shape[0]):
+            for i, obj_id in enumerate( self.points_id ):
+                p = self.points[obj_id]
+                if p.shape[0] != 0:
+                    p = p[p[:,3]==ph]
+                    line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
+                else:
+                    line, = self.widgets['groupCanvas3D'][0].axes.plot([],[],[], ls[i],ms=ms[i],color=colors[i])
+                self.widgets['groupCanvas3D'][0].lines.append(line)
 
         self.widgets['groupCanvas3D'][0].draw()
 
@@ -319,8 +327,8 @@ class MyGUI(QDialog):
         z = int( self.widgets['groupTZC'][1].value() )
         c = int( self.widgets['groupTZC'][2].currentIndex() )
 
-        self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[t,z,c])
-        self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[t,z,c])
+        self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[t,c])
+        self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[t,c])
 
         vmin = int( self.widgets['groupCanvas2D'][0].value() )
         vmax = int( self.widgets['groupCanvas2D'][1].value() )
