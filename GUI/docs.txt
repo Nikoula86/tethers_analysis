@@ -4,5 +4,3 @@ create on :2019-01-22
 /*
 
 - current version assumes image dimension is ALWAYS 512(H)x1024(W)
-- FIXED: minval of B&C can't be higher than maxval
-- fix bug in the initialization: image should show both channels already!

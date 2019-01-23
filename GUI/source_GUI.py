@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QFileDialog, QMessageBox,QErrorMessage)
+        QVBoxLayout, QWidget, QFileDialog, QMessageBox, QErrorMessage)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -217,7 +217,10 @@ class MyGUI(QDialog):
             self.setEnableState(True)
             self.file_name = new_file
             self.stacks = self.loadStacks()
-            print('0')
+            if os.path.exists(os.path.join(*self.file_name.split('.')[:-1])+'_points.p'):
+                print('Good news! You clicked on this dataset already')
+                self.points = pickle.load(open(os.path.join(*self.file_name.split('.')[:-1])+'_points.p','rb'))
+
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
             for i in range(self.stacks.shape[2]):
@@ -310,14 +313,10 @@ class MyGUI(QDialog):
             else:
                 self.points[obj_id] = np.array([c])
         if event.button == 3:
-            print(self.points[obj_id])
-            print(self.points[obj_id].shape)
             if self.points[obj_id].shape[0] != 0:
                 dist = [ np.linalg.norm(c[:3]-c1) for c1 in self.points[obj_id][:,:3] ]
                 i = np.where(dist==np.min(dist))[0]
                 self.points[obj_id] = np.delete(self.points[obj_id], i, axis=0)
-            print(self.points[obj_id])
-            print(self.points[obj_id].shape)
         self.updateScatter()
 
 if __name__ == '__main__':
