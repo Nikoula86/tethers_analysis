@@ -6,12 +6,33 @@ Created on Mon Jan  7 15:51:21 2019
 """
 
 import numpy as np
-#import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from tqdm import tqdm
 from time import time
 import glob, os, sys, pickle
+
+def vector(p1,p2):
+
+    return p2-p1
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0), (0, 1))
+            1.5707963267948966
+            >>> angle_between((1, 0), (1, 0))
+            0.0
+            >>> angle_between((1, 0), (-1, 0))
+            3.141592653589793
+    """
+    dot = np.dot(v1,v2)
+    det = v1[0]*v2[1]-v1[1]*v2[0]
+    return np.arctan2(det,dot)
 
 def compute_rot_mat(d,th):
     ct = np.cos(th)
@@ -130,32 +151,6 @@ class Midline(object):
         # plt.show()
         return n_points_spline, S, T, N, B
 
-
-#%%
-def unit_vector(vector):
-    """ Returns the unit vector of the vector.  """
-    return vector / np.linalg.norm(vector)
-
-def angle_between(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-            >>> angle_between((1, 0), (0, 1))
-            1.5707963267948966
-            >>> angle_between((1, 0), (1, 0))
-            0.0
-            >>> angle_between((1, 0), (-1, 0))
-            3.141592653589793
-    """
-    dot = np.dot(v1,v2)
-    det = v1[0]*v2[1]-v1[1]*v2[0]
-    return np.arctan2(det,dot)
-
-def vector(p1,p2):
-
-    return p2-p1
-
-#%%
-
 class Tethers(object):
     
     def __init__(self, coords_file):
@@ -246,7 +241,7 @@ class Tethers(object):
         ax.set_ylim(0,1)
 
         points_sap = self.extract_tethers2D_single_phase(phase=phase,method=method)
-        print(points_sap)
+        # print(points_sap)
 
         for i, ch in enumerate( ['tether_Atrium','tether_Ventricle'] ):
             if points_sap[ch].shape[0]>0:
@@ -328,35 +323,16 @@ class Tethers(object):
 
         return points_sap
 
-
-'''
-The only input needed
-'''
-# paths = [ '180907_kdrlrasCherry_myl7radGFP_001_merged',
-#     '180907_kdrlrasCherry_myl7radGFP_002_merged',
-#     '180914_kdrlrasCherry_mylGFP_ZO1_3_merge',
-#     '180914_kdrlrasCherry_mylGFP_ZO1_4_merge_good',
-#     '180928_kdrlrasCherry_myl7rasGFP_paxillin_2_merge_good',
-#     '180928_kdrlrasCherry_myl7rasGFP_paxillin_3_merge_good',
-#     '180928_kdrlrasCherry_myl7rasGFP_paxillin_4_merge_good',
-#     '181107_kdrlRasCherry_Myl7GFP_phalloidine647_003_merge/try1',
-#     '181107_kdrlRasCherry_Myl7GFP_phalloidine647_003_merge/try2',
-#     '181107_kdrlRasCherry_Myl7GFP_phalloidine647_001_merge/try1',
-#     '181107_kdrlRasCherry_Myl7GFP_phalloidine647_001_merge/try2_better',
-#     ]
-
-# path = paths[3]
-
-
 # midline = Midline('test_unwrap_heart/5D_merged_points.p')
 # midline.fix_outliers(idx=3)
 # midline.smooth_tube(sigma=5)
 # midline.extract_midline_coord_system()
 
-method = 'fs'
+method = 'pt'               # 'fs' OR 'pt'
+color_code = 'chamber_dep'    # 'chamber_dep' OR 'phase_dep'
 tethers = Tethers('test_unwrap_heart/5D_merged_points.p')
 tethers.plot_XYZ_all_phases(method=method)
-tethers.plot_SAP_all_phases(color_code='chamber_dep', method=method)
+tethers.plot_SAP_all_phases(color_code=color_code, method=method)
 
 plt.show()
 
