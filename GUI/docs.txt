@@ -1,6 +1,16 @@
-*/
+#################################
 USEFUL NOTES FOR TETHERS GUI
-create on :2019-01-22
-/*
+Created on: 2019-01-22
+Author: Nicola and Anjalie
+#################################
 
+Bugs/things that could be improved:
 - current version assumes image dimension is ALWAYS 512(H)x1024(W)
+- make exe
+- make 3D plot also with phase dependent option
+
+Documentation:
+- open terminal in the folder where "source_GUI.py" is and type ">> python source_GUI.py" to launch the application
+- "Load Image data" is the only button available. Gives a Error message when a non 'tif' file is selected
+- IMPORTANT: you should have a midline in every contraction phase where you labeled tethers, AND you should have 1 and only 1 AVCanal!
+
