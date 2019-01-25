@@ -32,7 +32,7 @@ class Canvas2D(FigureCanvas):
         FigureCanvas.updateGeometry(self)
         self.plot(data=data)
         self.mpl_connect('motion_notify_event', self.hover)
-        self.setMouseTracking(True)
+        self.cursor = self.axes.plot([0], [0], visible=False, marker = '+',color='white',ms=10000,lw=.5,alpha=.5)[0]
 
     def leaveEvent(self, QEvent):
         QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
@@ -40,11 +40,13 @@ class Canvas2D(FigureCanvas):
 
     def hover(self, event):
         if event.inaxes == self.axes:
-            (x,y) = (event.xdata,event.ydata)
             QApplication.setOverrideCursor(QCursor(Qt.BlankCursor))
-            self.target[0].set_data([0,1024],[y,y])
-            self.target[1].set_data([x,x],[0,512])
-            self.draw()
+            self.cursor.set_data([event.xdata], [event.ydata])
+            self.cursor.set_visible(True)
+        else:
+            QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
+            self.cursor.set_visible(False)
+        self.draw()
  
     def plot(self,data):
         if data == []:
