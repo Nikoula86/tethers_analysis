@@ -42,8 +42,8 @@ class Canvas2D(FigureCanvas):
         if event.inaxes == self.axes:
             (x,y) = (event.xdata,event.ydata)
             QApplication.setOverrideCursor(QCursor(Qt.BlankCursor))
-            self.target[0].set_data([x-64,x+64],[y,y])
-            self.target[1].set_data([x,x],[y-64,y+64])
+            self.target[0].set_data([0,1024],[y,y])
+            self.target[1].set_data([x,x],[0,512])
             self.draw()
  
     def plot(self,data):
@@ -191,11 +191,12 @@ class MyGUI(QDialog):
 
         CBox = QComboBox(); CBox.addItems(self.channels)
         CLabel = QLabel("&Channel:"); CLabel.setBuddy(CBox)
-        CBox.currentIndexChanged.connect(self.updateBC)
+        CBox.currentIndexChanged.connect(self.updateCcontrolled)
         
         chBox = [ QCheckBox(ch) for ch in self.channels ]
         [ box.stateChanged.connect(self.updateCanvas2D) for box in chBox ]
         [ box.setCheckState(False) for box in chBox ]
+        self.chVal = [ [0,2**16-1] for ch in self.channels ]
 
         layout = QGridLayout()
         layout.addWidget(TLabel,0,0); layout.addWidget(TBox,0,1)
@@ -371,16 +372,31 @@ class MyGUI(QDialog):
         self.widgets['groupCanvas3D'][0].draw()
         self.widgets['groupCanvas3D'][0].flush_events()
 
-    def updateBC(self):
+    def updateCcontrolled(self):
         t = int( self.widgets['groupTZC'][0].value() )
-        z = int( self.widgets['groupTZC'][1].value() )
         c = int( self.widgets['groupTZC'][2].currentIndex() )
 
         self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[t,c])
         self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[t,c])
 
+        self.widgets['groupCanvas2D'][0].blockSignals(True)
+        self.widgets['groupCanvas2D'][1].blockSignals(True)
+        self.widgets['groupCanvas2D'][0].setValue(self.chVal[c][0])
+        self.widgets['groupCanvas2D'][1].setValue(self.chVal[c][1])
+        self.widgets['groupCanvas2D'][0].blockSignals(False)
+        self.widgets['groupCanvas2D'][1].blockSignals(False)
+
+        self.updateBC()
+
+
+    def updateBC(self):
+        t = int( self.widgets['groupTZC'][0].value() )
+        c = int( self.widgets['groupTZC'][2].currentIndex() )
+
         vmin = int( self.widgets['groupCanvas2D'][0].value() )
         vmax = int( self.widgets['groupCanvas2D'][1].value() )
+
+        self.chVal[c] = [ vmin, vmax ]
 
         if self.widgets['groupCanvas2D'][0].value() >= self.widgets['groupCanvas2D'][1].value():
             self.widgets['groupCanvas2D'][0].setValue(self.widgets['groupCanvas2D'][1].value()-1)
