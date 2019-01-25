@@ -254,7 +254,7 @@ class MyGUI(QDialog):
     def selectImageFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
         if new_file.split('.')[-1] not in ['tif','tiff']:
-            QMessageBox.warning(self,'Warning!','This is not a tif file!')
+            QMessageBox.warning(self,'Warning, invalid input file!','Only \".tif\"" file implemented so far')
             return
         if new_file != '':
             self.setEnableState(True)
@@ -287,8 +287,7 @@ class MyGUI(QDialog):
     def selectPointsFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
         if new_file.split('.')[-1] not in ['p','pickle']:
-            QMessageBox.warning(self,'Warning!','This is not an invalid points file!')
-            return
+            QMessageBox.warning(self,'Warning, invalid input file!','Only pickle file implemented so far:\n please choose a valid \".p\" file')
         if new_file != '':
             self.points = pickle.load(open(new_file,'rb'))
             self.updateScatter()
@@ -297,11 +296,13 @@ class MyGUI(QDialog):
     def saveData(self):
         if self.file_name != '':
             save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
-            if save_file_name != '':
+            if (save_file_name[-2:]=='.p') and (len(save_file_name)>2):
                 print('#'*40)
                 print('Saving data to:\n\t', save_file_name)
                 pickle.dump(self.points,open(save_file_name,'wb'))
                 print('Done')
+            else:
+                QMessageBox.warning(self,'Warning, invalid file name!','Only pickle file saving is implemented so far:\n please chose a \".p\" file name')
 
     def loadStacks(self):
         print('#'*40)
