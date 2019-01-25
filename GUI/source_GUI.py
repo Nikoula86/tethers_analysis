@@ -53,7 +53,7 @@ class Canvas2D(FigureCanvas):
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
         cmap2._init() # create the _lut array, with rgba values
         cmap1._init() # create the _lut array, with rgba values
-        alphas = np.linspace(0, .5, cmap2.N+3)
+        alphas = np.linspace(0, 1., cmap2.N+3)
         cmap2._lut[:,-1] = alphas
         cmap1._lut[:,-1] = alphas
         colors = [cmap1,cmap2] 
