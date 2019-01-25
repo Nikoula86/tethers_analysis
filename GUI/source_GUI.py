@@ -328,9 +328,7 @@ class MyGUI(QDialog):
 
     def swapColors(self):
         self.stacks = np.array( self.stacks[:,:,::-1,:,:] )
-        for i in range(self.stacks.shape[0]):
-            for j in range(self.stacks.shape[2]):
-                self._maxval[i,j] = np.max(self.stacks[i,:,j,:,:])
+        self._maxval = np.array( self._maxval[:,::-1] )
         self.updateCanvas2D()
 
     def setEnableState(self, state):
