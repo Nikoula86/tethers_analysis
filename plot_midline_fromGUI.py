@@ -329,7 +329,7 @@ class Tethers(object):
 # midline.extract_midline_coord_system()
 
 method = 'pt'               # 'fs' OR 'pt'
-color_code = 'chamber_dep'    # 'chamber_dep' OR 'phase_dep'
+color_code = 'phase_dep'    # 'chamber_dep' OR 'phase_dep'
 tethers = Tethers('test_unwrap_heart/5D_merged_points.p')
 tethers.plot_XYZ_all_phases(method=method)
 tethers.plot_SAP_all_phases(color_code=color_code, method=method)

@@ -1,3 +1,4 @@
+from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import QDateTime, Qt, QTimer
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -38,6 +39,7 @@ class Canvas2D(FigureCanvas):
         cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
         cmap2._init() # create the _lut array, with rgba values
+        cmap1._init() # create the _lut array, with rgba values
         alphas = np.linspace(0, 1., cmap2.N+3)
         cmap2._lut[:,-1] = alphas
         colors = [cmap1,cmap2] 
@@ -211,20 +213,32 @@ class MyGUI(QDialog):
         minValSlider.valueChanged.connect(self.updateBC)
         maxValSlider.valueChanged.connect(self.updateBC)
         canvas2D.mpl_connect('button_press_event', self.mouseClick)
+        canvas2D.mpl_connect("motion_notify_event", self.hover)
+
+    def hover(self, event):
+        if event.inaxes == self.widgets['groupCanvas2D'][2].axes:
+            QApplication.setOverrideCursor(QCursor(Qt.CrossCursor))
+        else:
+            QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
+
 
     def createCanvas3DGroupBox(self):
         self.groupCanvas3DBox = QGroupBox("")
 
+        isplot = QCheckBox('Show live 3D plot')
+        isphase = QCheckBox('Show only current contraction phase')
         canvas3D = Canvas3D(self, width=2, height=2)
 
         layout = QGridLayout()
-        layout.addWidget(canvas3D,0,0)
+        layout.addWidget(isplot,0,0)
+        layout.addWidget(isphase,0,0)
+        layout.addWidget(canvas3D,1,0)
 
         sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
         self.groupCanvas3DBox.heightForWidth(1)
         canvas3D.setSizePolicy(sp)
         self.groupCanvas3DBox.setLayout(layout)
-        self.widgets['groupCanvas3D'] = [canvas3D]
+        self.widgets['groupCanvas3D'] = [canvas3D,isplot,isphase]
 
     #%%
     def selectImageFile(self):
@@ -345,8 +359,13 @@ class MyGUI(QDialog):
         t = int( self.widgets['groupTZC'][0].value() )
         z = int( self.widgets['groupTZC'][1].value() )
 
+        if self.widgets['groupCanvas3D'][1].checkState():
+            point_plot = { obj_id: self.points[obj_id] for obj_id in self.points.keys() }
+        else:
+            point_plot = { obj_id: self.points[obj_id] for obj_id in self.points.keys() }
+
         for i, obj_id in enumerate(self.points_id):
-            ps = self.points[obj_id]
+            ps = 
             if ps.shape[0]!=0:
                 ps = ps[ps[:,2].astype(np.uint16)==z,:]
                 ps = ps[ps[:,3].astype(np.uint16)==t,:]
@@ -390,7 +409,8 @@ class MyGUI(QDialog):
                 i = np.where(dist==np.min(dist))[0]
                 self.points[obj_id] = np.delete(self.points[obj_id], _idxs[i], axis=0)
         self.updateScatter()
-        self.updateCanvas3D()
+        if self.widgets['groupCanvas3D'][1].checkState():
+            self.updateCanvas3D()
 
 # if __name__ == '__main__':
 
