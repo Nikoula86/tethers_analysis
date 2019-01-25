@@ -273,7 +273,7 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas3D'][0].lines = []
             for ph in range(self.stacks.shape[0]):
                 for i, obj_id in enumerate( self.points_id ):
-                    line, = self.widgets['groupCanvas3D'][0].axes.plot([0],[0],[0], ls[i],ms=ms[i],color=colors[i])
+                    line, = self.widgets['groupCanvas3D'][0].axes.plot([],[],[], ls[i],ms=ms[i],color=colors[i])
                     self.widgets['groupCanvas3D'][0].lines.append(line)
             self.widgets['groupCanvas3D'][0].draw()
 
@@ -286,16 +286,17 @@ class MyGUI(QDialog):
 
     def selectPointsFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
-        if new_file.split('.')[-1] not in ['p','pickle']:
-            QMessageBox.warning(self,'Warning, invalid input file!','Only pickle file implemented so far:\n please choose a valid \".p\" file')
         if new_file != '':
-            self.points = pickle.load(open(new_file,'rb'))
-            self.updateScatter()
-            self.updateCanvas3D()
+            if new_file.split('.')[-1] not in ['p','pickle']:
+                QMessageBox.warning(self,'Warning, invalid input file!','Only pickle file implemented so far:\n please choose a valid \".p\" file')
+            else:
+                self.points = pickle.load(open(new_file,'rb'))
+                self.updateScatter()
+                self.updateCanvas3D()
 
     def saveData(self):
-        if self.file_name != '':
-            save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
+        save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
+        if save_file_name != '':
             if (save_file_name[-2:]=='.p') and (len(save_file_name)>2):
                 print('#'*40)
                 print('Saving data to:\n\t', save_file_name)
