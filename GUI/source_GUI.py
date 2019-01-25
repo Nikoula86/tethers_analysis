@@ -55,8 +55,9 @@ class Canvas2D(FigureCanvas):
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
         cmap2._init() # create the _lut array, with rgba values
         cmap1._init() # create the _lut array, with rgba values
-        alphas = np.linspace(0, 1., cmap2.N+3)
+        alphas = np.linspace(0, .6, cmap2.N+3)
         cmap2._lut[:,-1] = alphas
+        alphas = np.linspace(1., 1., cmap1.N+3)
         cmap1._lut[:,-1] = alphas
         colors = [cmap1,cmap2] 
         self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
@@ -195,6 +196,10 @@ class MyGUI(QDialog):
         CLabel = QLabel("&Channel:"); CLabel.setBuddy(CBox)
         CBox.currentIndexChanged.connect(self.updateCcontrolled)
         
+        swapChannelButton = QPushButton("Swap channel colors")
+        swapChannelButton.setFocusPolicy(Qt.NoFocus)
+        swapChannelButton.clicked.connect(self.swapColors)
+
         chBox = [ QCheckBox(ch) for ch in self.channels ]
         [ box.stateChanged.connect(self.updateCanvas2D) for box in chBox ]
         [ box.setCheckState(False) for box in chBox ]
@@ -204,8 +209,9 @@ class MyGUI(QDialog):
         layout.addWidget(TLabel,0,0); layout.addWidget(TBox,0,1)
         layout.addWidget(ZLabel,1,0); layout.addWidget(ZBox,1,1)
         layout.addWidget(CLabel,2,0); layout.addWidget(CBox,2,1)
+        layout.addWidget(swapChannelButton,3,0,1,2);
         for i, b in enumerate( chBox ):
-            layout.addWidget(b,i+3,0)
+            layout.addWidget(b,i+4,0)
 
         self.groupTZCControl.setLayout(layout)
         self.widgets['groupTZC'] = [TBox,ZBox,CBox,*chBox]
@@ -319,6 +325,12 @@ class MyGUI(QDialog):
         print('Stack shape (TZCHW):', stacks.shape)
         print('Done')
         return stacks, _maxval
+
+    def swapColors(self):
+        self.stacks = self.stacks[:,:,::-1,:,:]
+        for i in range(stacks.shape[0]):
+            for j in range(stacks.shape[2]):
+                self._maxval[i,j] = np.max(stacks[i,:,j,:,:])
 
     def setEnableState(self, state):
         self.groupObjectsControl.setEnabled(state)
