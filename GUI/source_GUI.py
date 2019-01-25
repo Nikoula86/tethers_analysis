@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QCursor
+from PyQt5.QtGui import QCursor, QPixmap, QColor,QPainter
 from PyQt5.QtCore import QDateTime, Qt, QTimer
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
