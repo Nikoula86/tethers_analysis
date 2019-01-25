@@ -31,7 +31,20 @@ class Canvas2D(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
         self.plot(data=data)
- 
+        self.mpl_connect('motion_notify_event', self.hover)
+        self.setMouseTracking(True)
+
+    def leaveEvent(self, QEvent):
+        QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
+        pass
+
+    def hover(self, event):
+        if event.inaxes == self.axes:
+            (x,y) = (event.xdata,event.ydata)
+            QApplication.setOverrideCursor(QCursor(Qt.BlankCursor))
+            self.target[0].set_data([x-64,x+64],[y,y])
+            self.target[1].set_data([x,x],[y-64,y+64])
+            self.draw()
  
     def plot(self,data):
         if data == []:
@@ -40,8 +53,9 @@ class Canvas2D(FigureCanvas):
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
         cmap2._init() # create the _lut array, with rgba values
         cmap1._init() # create the _lut array, with rgba values
-        alphas = np.linspace(0, 1., cmap2.N+3)
+        alphas = np.linspace(0, .5, cmap2.N+3)
         cmap2._lut[:,-1] = alphas
+        cmap1._lut[:,-1] = alphas
         colors = [cmap1,cmap2] 
         self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
 
@@ -53,6 +67,7 @@ class Canvas2D(FigureCanvas):
             line, = self.axes.plot([],[],' ',color=colors[i],ms=ms[i],marker=marker[i])
             self.points_scatter.append(line)
 
+        self.target = [ self.axes.plot([],[],'-w',lw=.2)[0], self.axes.plot([],[],'-w',lw=.2)[0] ]
         # use self.widgets['groupCanvas2D'][2].image_shown.set_data(img); canvas2d.draw(); to update image
         self.axes.grid(False)
         self.axes.set_xticks([])
@@ -101,7 +116,7 @@ class MyGUI(QDialog):
         self.points = { object_id: np.array([]) for object_id in self.points_id }
         self.file_name = ''
         self.stacks = np.zeros((10,10,2,512,1024))
-        self.channels = ['488nm', '561nm']
+        self.channels = ['channel 0', 'channel 1']
         self.widgets = {}
 
         self.createLoadSaveGroupBox()
@@ -213,14 +228,6 @@ class MyGUI(QDialog):
         minValSlider.valueChanged.connect(self.updateBC)
         maxValSlider.valueChanged.connect(self.updateBC)
         canvas2D.mpl_connect('button_press_event', self.mouseClick)
-        canvas2D.mpl_connect("motion_notify_event", self.hover)
-
-    def hover(self, event):
-        if event.inaxes == self.widgets['groupCanvas2D'][2].axes:
-            QApplication.setOverrideCursor(QCursor(Qt.CrossCursor))
-        else:
-            QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
-
 
     def createCanvas3DGroupBox(self):
         self.groupCanvas3DBox = QGroupBox("")
@@ -231,14 +238,17 @@ class MyGUI(QDialog):
 
         layout = QGridLayout()
         layout.addWidget(isplot,0,0)
-        layout.addWidget(isphase,0,0)
-        layout.addWidget(canvas3D,1,0)
+        layout.addWidget(isphase,1,0)
+        layout.addWidget(canvas3D,2,0)
 
         sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
         self.groupCanvas3DBox.heightForWidth(1)
         canvas3D.setSizePolicy(sp)
         self.groupCanvas3DBox.setLayout(layout)
         self.widgets['groupCanvas3D'] = [canvas3D,isplot,isphase]
+
+        isplot.stateChanged.connect(self.updateCanvas3D)
+        isphase.stateChanged.connect(self.updateCanvas3D)
 
     #%%
     def selectImageFile(self):
@@ -257,12 +267,15 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setValue(self._maxval[0,0])
 
+            ms = [3,3,3,5]
+            ls = [' o', ' o', ' o', '-o']
+            colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
             self.widgets['groupCanvas3D'][0].lines = []
             for ph in range(self.stacks.shape[0]):
                 for i, obj_id in enumerate( self.points_id ):
-                    else:
-                    line, = self.widgets['groupCanvas3D'][0].axes.plot([],[],[], ls[i],ms=ms[i],color=colors[i])
+                    line, = self.widgets['groupCanvas3D'][0].axes.plot([0],[0],[0], ls[i],ms=ms[i],color=colors[i])
                     self.widgets['groupCanvas3D'][0].lines.append(line)
+            self.widgets['groupCanvas3D'][0].draw()
 
             for i in range(self.stacks.shape[2]):
                 self.widgets['groupTZC'][i+3].setChecked(True)
@@ -324,30 +337,37 @@ class MyGUI(QDialog):
                 self.widgets['groupCanvas2D'][2].images_shown[i].set_data(self.stacks[t,z,i]*0)
 
         self.widgets['groupCanvas2D'][2].draw()
+        self.widgets['groupCanvas2D'][2].flush_events()
         self.updateScatter()
 
     def updateCanvas3D(self):
         if not self.widgets['groupCanvas3D'][1].checkState():
             return
+        # only show the current contraction phase
+        t = int( self.widgets['groupTZC'][0].value() )
+        point_plot = { _id: self.points[_id] for _id in self.points_id }
+        if self.widgets['groupCanvas3D'][2].checkState():
+            for _id in self.points_id:
+                if point_plot[_id].shape[0] > 0:
+                    point_plot[_id] = point_plot[_id][point_plot[_id][:,3]==t]
 
+        # update all lines
         ms = [3,3,3,5]
         ls = [' o', ' o', ' o', '-o']
         colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
-        # remove all lines
-        [ l.remove() for l in self.widgets['groupCanvas3D'][0].lines ]
-        self.widgets['groupCanvas3D'][0].lines = []
+        self.widgets['groupCanvas3D'][0].axes.clear()
         idx = 0
         for ph in range(self.stacks.shape[0]):
             for i, obj_id in enumerate( self.points_id ):
-                p = self.points[obj_id]
+                p = point_plot[obj_id]
                 if p.shape[0] != 0:
                     p = p[p[:,3]==ph]
-                    self.widgets['groupCanvas3D'][0].lines[idx].set_data(p[:,0],p[:,1])
-                    self.widgets['groupCanvas3D'][0].lines[idx].set_3d_properties(p[:,2])
-                    #axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
-                self.widgets['groupCanvas3D'][0].lines.append(line)
+                    line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
+                    self.widgets['groupCanvas3D'][0].lines[idx] = line
+                idx += 1
 
         self.widgets['groupCanvas3D'][0].draw()
+        self.widgets['groupCanvas3D'][0].flush_events()
 
     def updateBC(self):
         t = int( self.widgets['groupTZC'][0].value() )
@@ -371,13 +391,8 @@ class MyGUI(QDialog):
         t = int( self.widgets['groupTZC'][0].value() )
         z = int( self.widgets['groupTZC'][1].value() )
 
-        if self.widgets['groupCanvas3D'][1].checkState():
-            point_plot = { obj_id: self.points[obj_id] for obj_id in self.points.keys() }
-        else:
-            point_plot = { obj_id: self.points[obj_id] for obj_id in self.points.keys() }
-
         for i, obj_id in enumerate(self.points_id):
-            ps = 
+            ps = self.points[obj_id]
             if ps.shape[0]!=0:
                 ps = ps[ps[:,2].astype(np.uint16)==z,:]
                 ps = ps[ps[:,3].astype(np.uint16)==t,:]
