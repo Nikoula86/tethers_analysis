@@ -256,6 +256,14 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setValue(self._maxval[0,0])
+
+            self.widgets['groupCanvas3D'][0].lines = []
+            for ph in range(self.stacks.shape[0]):
+                for i, obj_id in enumerate( self.points_id ):
+                    else:
+                    line, = self.widgets['groupCanvas3D'][0].axes.plot([],[],[], ls[i],ms=ms[i],color=colors[i])
+                    self.widgets['groupCanvas3D'][0].lines.append(line)
+
             for i in range(self.stacks.shape[2]):
                 self.widgets['groupTZC'][i+3].setChecked(True)
             for i in range(2):
@@ -319,20 +327,24 @@ class MyGUI(QDialog):
         self.updateScatter()
 
     def updateCanvas3D(self):
-        ms = [5,5,5,5]
+        if not self.widgets['groupCanvas3D'][1].checkState():
+            return
+
+        ms = [3,3,3,5]
         ls = [' o', ' o', ' o', '-o']
         colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
         # remove all lines
         [ l.remove() for l in self.widgets['groupCanvas3D'][0].lines ]
         self.widgets['groupCanvas3D'][0].lines = []
+        idx = 0
         for ph in range(self.stacks.shape[0]):
             for i, obj_id in enumerate( self.points_id ):
                 p = self.points[obj_id]
                 if p.shape[0] != 0:
                     p = p[p[:,3]==ph]
-                    line, = self.widgets['groupCanvas3D'][0].axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
-                else:
-                    line, = self.widgets['groupCanvas3D'][0].axes.plot([],[],[], ls[i],ms=ms[i],color=colors[i])
+                    self.widgets['groupCanvas3D'][0].lines[idx].set_data(p[:,0],p[:,1])
+                    self.widgets['groupCanvas3D'][0].lines[idx].set_3d_properties(p[:,2])
+                    #axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
                 self.widgets['groupCanvas3D'][0].lines.append(line)
 
         self.widgets['groupCanvas3D'][0].draw()
@@ -409,8 +421,7 @@ class MyGUI(QDialog):
                 i = np.where(dist==np.min(dist))[0]
                 self.points[obj_id] = np.delete(self.points[obj_id], _idxs[i], axis=0)
         self.updateScatter()
-        if self.widgets['groupCanvas3D'][1].checkState():
-            self.updateCanvas3D()
+        self.updateCanvas3D()
 
 # if __name__ == '__main__':
 
