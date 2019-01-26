@@ -30,6 +30,7 @@ class Canvas2D(FigureCanvas):
                 QSizePolicy.Expanding,
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
+        # self.gray2rgb(data=data)
         self.plot(data=data)
         self.mpl_connect('motion_notify_event', self.hover)
         self.cursor = self.axes.plot([0], [0], visible=False, marker = '+',color='white',ms=10000,lw=.5,alpha=.5)[0]
@@ -51,16 +52,24 @@ class Canvas2D(FigureCanvas):
     def plot(self,data):
         if data == []:
             data = np.zeros((2,512,1024))
+        # cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
+        # cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
+        # cmap2._init() # create the _lut array, with rgba values
+        # cmap1._init() # create the _lut array, with rgba values
+        # alphas = np.linspace(0, .6, cmap2.N+3)
+        # cmap2._lut[:,-1] = alphas
+        # alphas = np.linspace(1., 1., cmap1.N+3)
+        # cmap1._lut[:,-1] = alphas
+        # colors = [cmap1,cmap2] 
+        # self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
+        if data == []:
+            data = np.zeros((2,512,1024))
         cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
+        rgba_img = cmap1(data[0])[:,:,:3]
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
-        cmap2._init() # create the _lut array, with rgba values
-        cmap1._init() # create the _lut array, with rgba values
-        alphas = np.linspace(0, .6, cmap2.N+3)
-        cmap2._lut[:,-1] = alphas
-        alphas = np.linspace(1., 1., cmap1.N+3)
-        cmap1._lut[:,-1] = alphas
-        colors = [cmap1,cmap2] 
-        self.images_shown = [ self.axes.imshow(d, cmap=colors[i]) for i, d in enumerate(data) ]
+        rgba_img += cmap2(data[1])[:,:,:3]
+
+        self.images_shown = self.axes.imshow(rgba_img)
 
         colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
         ms = [5,5,5,5]
@@ -77,6 +86,7 @@ class Canvas2D(FigureCanvas):
         self.axes.set_yticks([])
         self.axes.set_axis_off() 
         self.draw()
+
 
 class Canvas3D(FigureCanvas):
  
@@ -328,7 +338,9 @@ class MyGUI(QDialog):
 
     def swapColors(self):
         self.stacks = np.array( self.stacks[:,:,::-1,:,:] )
-        self._maxval = np.array( self._maxval[:,::-1] )
+        for i in range(self.stacks.shape[0]):
+            for j in range(self.stacks.shape[2]):
+                self._maxval[i,j] = np.max(self.stacks[i,:,j,:,:])
         self.updateCanvas2D()
 
     def setEnableState(self, state):
@@ -344,13 +356,22 @@ class MyGUI(QDialog):
         z = int( self.widgets['groupTZC'][1].value() )
         # print('Current TZC: ',t,z)
 
-        show_one=False
+        cmap = [ LinearSegmentedColormap.from_list('mycmap1', ['black', 'aqua'],N=2**16-1),
+                LinearSegmentedColormap.from_list('mycmap2', ['black', 'red'],N=2**16-1) ]
+        self.rgba_img = np.zeros((512,1024,3))
+        print('ciao')
+        print(self.rgba_img[200,500])
         for i, b in enumerate( self.widgets['groupTZC'][3:] ):
+            print(self.rgba_img[200,500])
             if b.checkState():
-                show_one = True
-                self.widgets['groupCanvas2D'][2].images_shown[i].set_data(self.stacks[t,z,i])
-            else:
-                self.widgets['groupCanvas2D'][2].images_shown[i].set_data(self.stacks[t,z,i]*0)
+                print(cmap[i](self.stacks[t,z,0,...])[200,500,:3])
+                _min = self.chVal[i][0]
+                _max = self.chVal[i][1]
+                channel = np.clip(self.stacks[t,z,i,...],_min,_max)
+                channel = (channel-np.min(channel))/(np.max(channel)-np.min(channel))
+                self.rgba_img += cmap[i](channel)[:,:,:3]
+        print(self.rgba_img[200,500])
+        self.widgets['groupCanvas2D'][2].images_shown.set_data(self.rgba_img)
 
         self.widgets['groupCanvas2D'][2].draw()
         self.widgets['groupCanvas2D'][2].flush_events()
@@ -415,8 +436,10 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][0].setValue(self.widgets['groupCanvas2D'][1].value()-1)
             vmin = int( self.widgets['groupCanvas2D'][0].value() )
 
-        self.widgets['groupCanvas2D'][2].images_shown[c].set_clim([vmin,vmax])
-        self.widgets['groupCanvas2D'][2].draw()
+        self.updateCanvas2D()
+
+        # self.widgets['groupCanvas2D'][2].images_shown[c].set_clim([vmin,vmax])
+        # self.widgets['groupCanvas2D'][2].draw()
 
     def updateScatter(self):
         t = int( self.widgets['groupTZC'][0].value() )
