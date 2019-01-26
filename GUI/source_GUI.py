@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QFileDialog, QMessageBox, QErrorMessage)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +14,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from tifffile import imread
 from matplotlib.colors import LinearSegmentedColormap
 import pandas as pd
-import os, pickle
+import os, pickle, time
 
 class Canvas2D(FigureCanvas):
  
@@ -236,17 +237,25 @@ class MyGUI(QDialog):
         minValSlider.setMaximum(2**16-1)
         canvas2D = Canvas2D(self, width=10, height=5)
 
+        navi_toolbar = NavigationToolbar(canvas2D, self)
+        navi_toolbar.setFocusPolicy(Qt.NoFocus)
+
         layout = QGridLayout()
-        layout.addWidget(minValSlider,0,0,1,1)
-        layout.addWidget(maxValSlider,0,1,1,1)
-        layout.addWidget(canvas2D,0,2,1,1)
+        layout.addWidget(minValSlider,1,0,1,1)
+        layout.addWidget(maxValSlider,1,1,1,1)
+        layout.addWidget(canvas2D,1,2,1,1)
+        layout.addWidget(navi_toolbar,0,2,1,1)
 
         self.groupCanvas2DBox.setLayout(layout)
         self.widgets['groupCanvas2D'] = [minValSlider,maxValSlider,canvas2D]
 
         minValSlider.valueChanged.connect(self.updateBC)
         maxValSlider.valueChanged.connect(self.updateBC)
-        canvas2D.mpl_connect('button_press_event', self.mouseClick)
+        self.press = False
+        self.move = False
+        canvas2D.mpl_connect('button_press_event', self.onpress)
+        canvas2D.mpl_connect('motion_notify_event', self.onmove)
+        canvas2D.mpl_connect('button_release_event', self.mouseClick)
 
     def createCanvas3DGroupBox(self):
         self.groupCanvas3DBox = QGroupBox("")
@@ -451,41 +460,53 @@ class MyGUI(QDialog):
 
         self.widgets['groupCanvas2D'][2].draw()
 
+    def onpress(self,event):
+        self.start = time.time()
+        self.press = True
+
+    def onmove(self,event):
+        if self.press:
+            self.move = True
+
     def mouseClick(self, event):
-        # print('Mouse clicked! ', event)
-        obj_id = self.widgets['groupObjects'][0].currentText()
-        t = int( self.widgets['groupTZC'][0].value() )
-        z = int( self.widgets['groupTZC'][1].value() )
-        c = np.array([np.rint(event.xdata),np.rint(event.ydata),z,t])
-        points = self.points[obj_id]
-        _idxs = np.arange(points.shape[0])
+        lagtime = time.time() - self.start
+        if self.press and ( (not self.move) or (lagtime<.05) ):
+            # print('Mouse clicked! ', event)
+            obj_id = self.widgets['groupObjects'][0].currentText()
+            t = int( self.widgets['groupTZC'][0].value() )
+            z = int( self.widgets['groupTZC'][1].value() )
+            c = np.array([np.rint(event.xdata),np.rint(event.ydata),z,t])
+            points = self.points[obj_id]
+            _idxs = np.arange(points.shape[0])
 
-        # LEFT CLICK: add point
-        if event.button == 1:
-            if points.shape[0]!=0:
-                self.points[obj_id] = np.append(self.points[obj_id],np.array([c]),axis=0)
-            else:
-                self.points[obj_id] = np.array([c])
+            # LEFT CLICK: add point
+            if event.button == 1:
+                if points.shape[0]!=0:
+                    self.points[obj_id] = np.append(self.points[obj_id],np.array([c]),axis=0)
+                else:
+                    self.points[obj_id] = np.array([c])
 
-        # RIGHT CLICK: remove point from the same contraction phase and focal plane
-        if event.button == 3:
-            new_points = []
-            new_idxs = []
-            for i, p in enumerate(points): # filter only points in the same focal plane and contraction phase
-                if p[2] == c[2]: # same focal plane
-                    if p[3] == c[3]: # same contraction phase
-                        new_points.append(p) # save the poiont
-                        new_idxs.append(i)   # save the original index
-            points = np.array(new_points)
-            _idxs = np.array(new_idxs)
+            # RIGHT CLICK: remove point from the same contraction phase and focal plane
+            if event.button == 3:
+                new_points = []
+                new_idxs = []
+                for i, p in enumerate(points): # filter only points in the same focal plane and contraction phase
+                    if p[2] == c[2]: # same focal plane
+                        if p[3] == c[3]: # same contraction phase
+                            new_points.append(p) # save the poiont
+                            new_idxs.append(i)   # save the original index
+                points = np.array(new_points)
+                _idxs = np.array(new_idxs)
 
-            # now find the closest point to the click and remove it
-            if len(_idxs) != 0:
-                dist = [ np.linalg.norm(c[:3]-c1) for c1 in points[:,:3] ]
-                i = np.where(dist==np.min(dist))[0]
-                self.points[obj_id] = np.delete(self.points[obj_id], _idxs[i], axis=0)
-        self.updateScatter()
-        self.updateCanvas3D()
+                # now find the closest point to the click and remove it
+                if len(_idxs) != 0:
+                    dist = [ np.linalg.norm(c[:3]-c1) for c1 in points[:,:3] ]
+                    i = np.where(dist==np.min(dist))[0]
+                    self.points[obj_id] = np.delete(self.points[obj_id], _idxs[i], axis=0)
+            self.updateScatter()
+            self.updateCanvas3D()
+        self.press = False
+        self.move = False
 
 # if __name__ == '__main__':
 
