@@ -11,7 +11,7 @@ Bugs/things that could be improved:
 - SOLVED: Add guides when plotting midline? 
 - SOLVED: Slow when working with big files (duh..): it's actually the 3D plot!
 - SOLVED: saving, make notice of ".p" or make it automatic
-- Showing multiple channels is not as nice as in FIJI (transparency?)
+- SOLVED: Showing multiple channels is not as nice as in FIJI (transparency?)
 - SOLVED: b&c settings of channel 0 should be remembered when moving to channel 1 and back
 
 Documentation:
