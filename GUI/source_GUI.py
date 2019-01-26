@@ -359,18 +359,13 @@ class MyGUI(QDialog):
         cmap = [ LinearSegmentedColormap.from_list('mycmap1', ['black', 'aqua'],N=2**16-1),
                 LinearSegmentedColormap.from_list('mycmap2', ['black', 'red'],N=2**16-1) ]
         self.rgba_img = np.zeros((512,1024,3))
-        print('ciao')
-        print(self.rgba_img[200,500])
         for i, b in enumerate( self.widgets['groupTZC'][3:] ):
-            print(self.rgba_img[200,500])
             if b.checkState():
-                print(cmap[i](self.stacks[t,z,0,...])[200,500,:3])
                 _min = self.chVal[i][0]
                 _max = self.chVal[i][1]
                 channel = np.clip(self.stacks[t,z,i,...],_min,_max)
                 channel = (channel-np.min(channel))/(np.max(channel)-np.min(channel))
                 self.rgba_img += cmap[i](channel)[:,:,:3]
-        print(self.rgba_img[200,500])
         self.widgets['groupCanvas2D'][2].images_shown.set_data(self.rgba_img)
 
         self.widgets['groupCanvas2D'][2].draw()
