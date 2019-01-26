@@ -239,6 +239,7 @@ class MyGUI(QDialog):
 
         navi_toolbar = NavigationToolbar(canvas2D, self)
         navi_toolbar.setFocusPolicy(Qt.NoFocus)
+        navi_toolbar.setMaximumHeight(30)
 
         layout = QGridLayout()
         layout.addWidget(minValSlider,1,0,1,1)
