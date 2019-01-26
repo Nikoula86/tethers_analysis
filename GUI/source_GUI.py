@@ -88,7 +88,6 @@ class Canvas2D(FigureCanvas):
         self.axes.set_axis_off() 
         self.draw()
 
-
 class Canvas3D(FigureCanvas):
  
     def __init__(self, parent=None, width=5, height=4, dpi=100,data=[]):
