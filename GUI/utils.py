@@ -119,9 +119,9 @@ class Canvas2D(FigureCanvas):
 
         self.images_shown = self.axes.imshow(rgba_img)
 
-        colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
-        ms = [5,5,5,5]
-        marker = ['o','o','o','o']
+        colors = ['#6eadd8','#ff7f0e','red','#c4c4c4']
+        ms = [5,5,5,2]
+        marker = ['o','o','X','x']
         self.points_scatter = []
         for i in range(4):
             line, = self.axes.plot([],[],' ',color=colors[i],ms=ms[i],marker=marker[i])
