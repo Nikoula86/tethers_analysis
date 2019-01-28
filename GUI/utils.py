@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication,)
+from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication, QTableWidget, QVBoxLayout,
+                            QPushButton, QColorDialog)
 from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
@@ -202,11 +203,36 @@ class Canvas3D(FigureCanvas):
 '''
 
 class ObjectDefiner(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, points={}, 
+                    colors = ['#6eadd8','#ff7f0e','red','#c4c4c4'], 
+                    markers = ['o','o','X','-x'],
+                    ms = [3,3,5,1]):
         super(ObjectDefiner, self).__init__(parent)
 
         QApplication.setStyle('Macintosh')
 
+        table = QTableWidget()
+        table.setRowCount(len(points.keys())+1)
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker'])
+
+        pickColor = QPushButton('Pick a color.')
+        pickColor.setFocusPolicy(Qt.NoFocus)
+        pickColor.clicked.connect(self.pickColor)
+
+        layout = QVBoxLayout()
+        layout.addWidget(table) 
+        layout.addWidget(pickColor)
+
+        self.setLayout(layout)
+
+    def populateTable(self):
+        for key in points:
+            return
+
+
+    def pickColor(self):
+        color = QColorDialog.getColor()
 
 
 if __name__ == '__main__':
