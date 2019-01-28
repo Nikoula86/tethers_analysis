@@ -13,7 +13,7 @@ Bugs/things that could be improved:
 - SOLVED: saving, make notice of ".p" or make it automatic
 - SOLVED: Showing multiple channels is not as nice as in FIJI (transparency?)
 - SOLVED: b&c settings of channel 0 should be remembered when moving to channel 1 and back
-- Possible to make the AVCanal point red? I've already made the mistake of making the midline with the AVC selection
+- SOLVED: Possible to make the AVCanal point red? I've already made the mistake of making the midline with the AVC selection
 - SOLVED: Possible to indicate z plane max and contraction phase max?
 
 Documentation:
