@@ -92,12 +92,12 @@ class MyGUI(QDialog):
         self.groupTZCControl = QGroupBox("")
 
         TBox = QSpinBox(); TBox.setValue(0)
-        TLabel = QLabel("&Contraction phase:"); TLabel.setBuddy(TBox)
+        self.TLabel = QLabel("&Contraction phase\n(0-?)"); self.TLabel.setBuddy(TBox)
         TBox.setKeyboardTracking(False)
         TBox.valueChanged.connect(self.updateCanvas2D)
 
         ZBox = QSpinBox(); ZBox.setValue(0)
-        ZLabel = QLabel("&Z plane:"); ZLabel.setBuddy(ZBox)
+        self.ZLabel = QLabel("&Z plane\n(0-?)"); self.ZLabel.setBuddy(ZBox)
         ZBox.setKeyboardTracking(False)
         ZBox.valueChanged.connect(self.updateCanvas2D)
 
@@ -115,8 +115,8 @@ class MyGUI(QDialog):
         self.chVal = [ [0,2**16-1] for ch in self.channels ]
 
         layout = QGridLayout()
-        layout.addWidget(TLabel,0,0); layout.addWidget(TBox,0,1)
-        layout.addWidget(ZLabel,1,0); layout.addWidget(ZBox,1,1)
+        layout.addWidget(self.TLabel,0,0); layout.addWidget(TBox,0,1)
+        layout.addWidget(self.ZLabel,1,0); layout.addWidget(ZBox,1,1)
         layout.addWidget(CLabel,2,0); layout.addWidget(CBox,2,1)
         layout.addWidget(swapChannelButton,3,0,1,2);
         for i, b in enumerate( chBox ):
@@ -199,6 +199,9 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setValue(self._maxval[0,0])
+
+            self.TLabel.setText("&Contraction phase\n(0-%s)"%str(self.stacks.shape[0]))
+            self.ZLabel.setText("&Z plane\n(0-%s)"%str(self.stacks.shape[1]))
 
             self.widgets['groupCanvas3D'][0].plot(self.points_id,self.points.coords,self.stacks.shape[0])
 

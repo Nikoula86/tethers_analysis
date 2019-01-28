@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PyQt5.QtWidgets import (QSizePolicy, QApplication,)
+from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication,)
 from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
@@ -24,6 +24,7 @@ def swapAxes(stacks, _maxval, ax = 0):
     stacks = np.flip( stacks, axis = ax )
     _maxval = np.flip(_maxval,axis = ax-2)
     return stacks, _maxval
+
 '''
 # classes
 '''
@@ -62,6 +63,12 @@ class PointObjects():
                 dist = [ np.linalg.norm(c[:3]-c1) for c1 in points[:,:3] ]
                 i = np.where(dist==np.min(dist))[0]
                 self.coords[current_id] = np.delete(self.coords[current_id], _idxs[i], axis=0)
+
+        self.performSanityCheck()
+
+    def performSanityCheck(self):
+        # check that
+        return
 
 class Canvas2D(FigureCanvas):
  
@@ -189,3 +196,25 @@ class Canvas3D(FigureCanvas):
 
         self.draw()
         self.flush_events()
+
+'''
+# subwindow to define points
+'''
+
+class ObjectDefiner(QDialog):
+    def __init__(self, parent=None):
+        super(ObjectDefiner, self).__init__(parent)
+
+        QApplication.setStyle('Macintosh')
+
+
+
+if __name__ == '__main__':
+
+    import sys
+
+    app = QApplication(sys.argv)
+    gallery = ObjectDefiner()
+    gallery.show()
+    sys.exit(app.exec_()) 
+
