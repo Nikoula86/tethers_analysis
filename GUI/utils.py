@@ -183,9 +183,9 @@ class Canvas3D(FigureCanvas):
  
  
     def plot(self,data_id,data,n_ph):
-        ms = [3,3,3,5]
-        ls = [' o', ' o', ' o', '-o']
-        colors = ['#6eadd8','#ff7f0e','white','#c4c4c4']
+        ms = [3,3,5,1]
+        ls = [' o', ' o', ' X', '-x']
+        colors = ['#6eadd8','#ff7f0e','red','#c4c4c4']
         self.axes.clear()
         for ph in range(n_ph):
             for i, obj_id in enumerate( data_id ):
