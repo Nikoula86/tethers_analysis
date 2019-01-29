@@ -29,15 +29,16 @@ def swapAxes(stacks, _maxval, ax = 0):
 
 def convertPoints(oldData):
     new = {'_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
-                    'colors': ['#1f77b4','#ff7f0e','black','grey'],
-                    'markers': ['o','o','X','-x'],
-                    'ms': [3,3,5,1],
-                    'is_instance': [0]*4,
-                    'coords': [np.array([])]*4 }
+                        'colors': ['#6eadd8','#ff7f0e','red','#c4c4c4'],
+                        'markers': ['o','o','X','-x'],
+                        'ms': [3,3,5,1],
+                        'is_instance': [0,0,0,0],
+                        'coords': [np.array([])]*4 }
     for key in oldData:
         i = new['_ids'].index(key)
-        new['coords'][i] = d[key]
-        new['is_instance'][i] = 1
+        new['coords'][i] = oldData[key]
+        if oldData[key].shape[0]>0:
+            new['is_instance'][i] = 1
     return new
 
 '''
@@ -46,8 +47,7 @@ def convertPoints(oldData):
 
 class PointObjects():
     def __init__(self, points_meta):
-        self.meta = points_meta
-        self.meta['coords'] = [ np.array([]) for _id in points_meta['_ids'] ]
+        self.meta = points_meta        # self.meta['coords'] = [ np.array([]) for _id in points_meta['_ids'] ]
 
     def updatePoints(self, current_id, coord, event):
         # print('Mouse clicked! ', event)

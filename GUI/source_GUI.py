@@ -21,12 +21,12 @@ class MyGUI(QDialog):
     def __init__(self, parent=None):
         super(MyGUI, self).__init__(parent)
 
-        self.points_meta = {'_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
-                            'colors': ['#1f77b4','#ff7f0e','black','grey'],
-                            'markers': ['o','o','X','-x'],
-                            'ms': [3,3,5,1],
-                            'is_instance': [0,0,0,0] }
-        self.points = ut.PointObjects(self.points_meta)
+        self.points = ut.PointObjects({ '_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
+                        'colors': ['#6eadd8','#ff7f0e','red','#c4c4c4'],
+                        'markers': ['o','o','X','-x'],
+                        'ms': [3,3,5,1],
+                        'is_instance': [0,0,0,0],
+                        'coords': [np.array([])]*4 })
         self.file_name = ''
         self.stacks = np.zeros((10,10,2,512,1024))
         self.channels = ['channel 0', 'channel 1']
@@ -229,8 +229,8 @@ class MyGUI(QDialog):
                 try:
                     self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
                 except:
-                    print('Converting data to newer version...')
-                    self.points.meta = 
+                    self.points.meta = ut.convertPoints(self.points.meta)
+                self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
                 self.updateCanvas3D()
 
     def saveData(self):
