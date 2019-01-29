@@ -9,6 +9,7 @@ from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
 import copy, re
+import matplotlib as mpl
 from ast import literal_eval
 
 '''
@@ -113,15 +114,26 @@ class Canvas3D(FigureCanvas):
         self.axes.set_xlim(auto=True)
         self.axes.set_ylim(auto=True)
         self.axes.set_zlim(auto=True)
+        # mpl.rcParams['lines.linewidth'] = 0
+        self.axes.xaxis.pane.fill = False
+        self.axes.yaxis.pane.fill = False
+        self.axes.zaxis.pane.fill = False
+        self.axes.xaxis.pane.set_edgecolor('gray')
+        self.axes.yaxis.pane.set_edgecolor('gray')
+        self.axes.zaxis.pane.set_edgecolor('gray')
 
-        FigureCanvas.setSizePolicy(self,
-                QSizePolicy.Expanding,
-                QSizePolicy.Expanding)
+        policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        policy.setHeightForWidth(True)
+        self.setSizePolicy(policy)
         FigureCanvas.updateGeometry(self)
  
- 
+    def heightForWidth(self, width):
+        return width 
+
     def plot(self,meta,n_ph):
         self.axes.clear()
+        self.axes.grid(False)
+        # mpl.rcParams['lines.linewidth'] = 0
         for ph in range(n_ph):
             for i, obj_id in enumerate( meta['_ids'] ):
                 if meta['is_instance'][i] == 1:
