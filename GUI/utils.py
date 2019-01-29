@@ -227,7 +227,7 @@ class ObjectDefiner(QDialog):
         table = QTableWidget()
         table.setRowCount(len(self.objects['_ids']))
         table.setColumnCount(5)
-        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker', 'Marker size', 'are istances'])
+        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker', 'Marker size', 'are instances'])
         self.table = table
 
         addObj = QPushButton('Add object.')
@@ -253,6 +253,15 @@ class ObjectDefiner(QDialog):
         self.populateTable()
         table.doubleClicked.connect(self.doubleClickEvent)
         table.itemChanged.connect(self.changeObjects)
+        self.setTableWidth()
+
+    def setTableWidth(self):
+        width = self.table.verticalHeader().width()
+        width += self.table.horizontalHeader().length()
+        if self.table.verticalScrollBar().isVisible():
+            width += self.table.verticalScrollBar().width()
+        width += self.table.frameWidth() * 2
+        self.table.setFixedWidth(width)
 
     def populateTable(self):
         (_ids,colors,markers,ms,n,coords) = self.unpackObjects()
@@ -265,7 +274,11 @@ class ObjectDefiner(QDialog):
             
         for j in range(self.table.rowCount()):
             self.table.setItem(j,4, QTableWidgetItem(str(n[j])))
-            self.table.item(j,4).setFlags(Qt.ItemIsEnabled)
+            flags = self.table.item(j, 4).flags()
+            flags &= ~Qt.ItemIsSelectable
+            flags &= ~Qt.ItemIsEditable
+            flags &= ~Qt.ItemIsEnabled
+            self.table.item(j, 4).setFlags(flags)
 
     def unpackObjects(self):
         return ( val for key, val in self.objects.items() )
@@ -274,7 +287,7 @@ class ObjectDefiner(QDialog):
         self.objects['_ids'] = [self.table.item(i,0).text() for i in range(self.table.rowCount()) if self.table.item(i,0)]
         self.objects['markers'] = [self.table.item(i,2).text() for i in range(self.table.rowCount()) if self.table.item(i,2)]
         self.objects['ms'] = [self.table.item(i,3).text() for i in range(self.table.rowCount()) if self.table.item(i,3)]
-        self.objects['is_instance'] = [self.table.item(i,4).text() for i in range(self.table.rowCount()) if self.table.item(i,4)]
+        self.objects['is_instance'] = [int(self.table.item(i,4).text()) for i in range(self.table.rowCount()) if self.table.item(i,4)]
 
     def doubleClickEvent(self, click):
         if click.column() == 1:
