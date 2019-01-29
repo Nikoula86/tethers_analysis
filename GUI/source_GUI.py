@@ -13,18 +13,20 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from tifffile import imread
 import pandas as pd
-import os, pickle, time
+import os, pickle, time, copy
 import utils as ut
-import copy
+import subWindows as sw
+import subClasses as sc
+import objects as obj
 
 class MyGUI(QDialog):
     def __init__(self, parent=None):
         super(MyGUI, self).__init__(parent)
 
-        self.points = ut.PointObjects({ '_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
+        self.points = obj.PointObjects({ '_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
                         'colors': ['#6eadd8','#ff7f0e','red','#c4c4c4'],
                         'markers': ['o','o','X','-x'],
-                        'ms': [3,3,5,1],
+                        'ms': [3,3,5,5],
                         'is_instance': [0,0,0,0],
                         'coords': [np.array([])]*4 })
         self.file_name = ''
@@ -49,6 +51,7 @@ class MyGUI(QDialog):
 
         self.setLayout(mainLayout)
         self.resize(1.2*960, 1.2*413)
+        self.setWindowTitle('Manual annotation tool')
         QApplication.setStyle('Macintosh')
 
     def createLoadSaveGroupBox(self):
@@ -139,7 +142,7 @@ class MyGUI(QDialog):
         maxValSlider.setValue(2**16-1)
         maxValSlider.setMaximum(2**16-1)
         minValSlider.setMaximum(2**16-1)
-        canvas2D = ut.Canvas2D(self, width=10, height=5)
+        canvas2D = sc.Canvas2D(self, width=10, height=5)
 
         navi_toolbar = NavigationToolbar(canvas2D, self)
         navi_toolbar.setFocusPolicy(Qt.NoFocus)
@@ -167,18 +170,20 @@ class MyGUI(QDialog):
 
         isplot = QCheckBox('Show live 3D plot')
         isphase = QCheckBox('Show only current contraction phase')
-        canvas3D = ut.Canvas3D(self, width=2, height=2)
+        canvas3D = sc.Canvas3D(self, width=2, height=2)
+        overview = sc.Overview(self, meta=self.points.meta, n_ph=self.stacks.shape[0])
 
         layout = QGridLayout()
         layout.addWidget(isplot,0,0)
         layout.addWidget(isphase,1,0)
         layout.addWidget(canvas3D,2,0)
+        layout.addWidget(overview,3,0)
 
         sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
         self.groupCanvas3DBox.heightForWidth(1)
         canvas3D.setSizePolicy(sp)
         self.groupCanvas3DBox.setLayout(layout)
-        self.widgets['groupCanvas3D'] = [canvas3D,isplot,isphase]
+        self.widgets['groupCanvas3D'] = [canvas3D,isplot,isphase,overview]
 
         isplot.stateChanged.connect(self.updateCanvas3D)
         isphase.stateChanged.connect(self.updateCanvas3D)
@@ -217,6 +222,7 @@ class MyGUI(QDialog):
                 self.widgets['groupTZC'][2].setCurrentIndex(i)
                 self.updateBCslider()
             self.updateCanvas2D()
+            self.widgets['groupCanvas3D'][3].populateTable(meta=self.points.meta, n_ph=self.stacks.shape[0])
 
     def selectPointsFile(self):
         new_file,_ = QFileDialog.getOpenFileName(self, "Select Merged File")
@@ -232,6 +238,7 @@ class MyGUI(QDialog):
                     self.points.meta = ut.convertPoints(self.points.meta)
                 self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
                 self.updateCanvas3D()
+                self.widgets['groupCanvas3D'][3].populateTable(self.points.meta)
 
     def saveData(self):
         save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
@@ -334,16 +341,21 @@ class MyGUI(QDialog):
             self.points.updatePoints(self.widgets['groupObjects'][0].currentText(),click_coord,event)
             self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
             self.updateCanvas3D()
+            self.widgets['groupCanvas3D'][3].populateTable(meta=self.points.meta, n_ph=self.stacks.shape[0])
         self.press = False
         self.move = False
 
     def managePoints(self):
         input_objects = copy.deepcopy(self.points.meta)
-        w = ut.ObjectDefiner(objects = input_objects)
+        w = sw.ObjectEditor(objects = input_objects)
         if w.exec_() == QDialog.Accepted:
             self.points.meta = w.outobjects
+            obj_id = self.widgets['groupObjects'][0].currentText()
             self.widgets['groupObjects'][0].clear()
             self.widgets['groupObjects'][0].addItems(self.points.meta['_ids'])
+            if obj_id in self.points.meta['_ids']:
+                idx = self.points.meta['_ids'].index(obj_id)
+                self.widgets['groupObjects'][0].setCurrentIndex(idx)
 # if __name__ == '__main__':
 
 import sys
