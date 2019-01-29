@@ -27,6 +27,19 @@ def swapAxes(stacks, _maxval, ax = 0):
     _maxval = np.flip(_maxval,axis = ax-2)
     return stacks, _maxval
 
+def convertPoints(oldData):
+    new = {'_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
+                    'colors': ['#1f77b4','#ff7f0e','black','grey'],
+                    'markers': ['o','o','X','-x'],
+                    'ms': [3,3,5,1],
+                    'is_instance': [0]*4,
+                    'coords': [np.array([])]*4 }
+    for key in oldData:
+        i = new['_ids'].index(key)
+        new['coords'][i] = d[key]
+        new['is_instance'][i] = 1
+    return new
+
 '''
 # classes
 '''

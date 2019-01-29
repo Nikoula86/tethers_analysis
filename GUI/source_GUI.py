@@ -224,9 +224,13 @@ class MyGUI(QDialog):
             if new_file.split('.')[-1] not in ['p','pickle']:
                 QMessageBox.warning(self,'Warning, invalid input file!','Only pickle file implemented so far:\n please choose a valid \".p\" file')
             else:
-                self.points.coords = pickle.load(open(new_file,'rb'))
+                self.points.meta = pickle.load(open(new_file,'rb'))
                 (t, z, c) = self.getTZC()
-                self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
+                try:
+                    self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
+                except:
+                    print('Converting data to newer version...')
+                    self.points.meta = 
                 self.updateCanvas3D()
 
     def saveData(self):
@@ -235,7 +239,7 @@ class MyGUI(QDialog):
             if (save_file_name[-2:]=='.p') and (len(save_file_name)>2):
                 print('#'*40)
                 print('Saving data to:\n\t', save_file_name)
-                pickle.dump(self.points.coords,open(save_file_name,'wb'))
+                pickle.dump(self.points.meta,open(save_file_name,'wb'))
                 print('Done')
             else:
                 QMessageBox.warning(self,'Warning, invalid file name!','Only pickle file saving is implemented so far:\n please chose a \".p\" file name')
