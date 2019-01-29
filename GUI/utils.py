@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication, QTableWidget, Q
 from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
+import copy
 
 def loadStacks(file_name):
     print('#'*40)
@@ -31,21 +32,22 @@ def swapAxes(stacks, _maxval, ax = 0):
 '''
 
 class PointObjects():
-    def __init__(self, points_id):
-        self.ids = points_id
-        self.coords = { _id: np.array([]) for _id in points_id }
+    def __init__(self, points_meta):
+        self.meta = points_meta
+        self.meta['coords'] = [ np.array([]) for _id in points_meta['_ids'] ]
 
     def updatePoints(self, current_id, coord, event):
         # print('Mouse clicked! ', event)
-        points = self.coords[current_id]
+        current_idx = self.meta['_ids'].index(current_id)
+        points = self.meta['coords'][current_idx]
         _idxs = np.arange(points.shape[0])
 
         # LEFT CLICK: add point
         if event.button == 1:
             if points.shape[0]!=0:
-                self.coords[current_id] = np.append(self.coords[current_id],np.array([coord]),axis=0)
+                self.meta['coords'][current_idx] = np.append(self.meta['coords'][current_idx],np.array([coord]),axis=0)
             else:
-                self.coords[current_id] = np.array([coord])
+                self.meta['coords'][current_idx] = np.array([coord])
 
         # RIGHT CLICK: remove point from the same contraction phase and focal plane
         if event.button == 3:
@@ -63,13 +65,14 @@ class PointObjects():
             if len(_idxs) != 0:
                 dist = [ np.linalg.norm(c[:3]-c1) for c1 in points[:,:3] ]
                 i = np.where(dist==np.min(dist))[0]
-                self.coords[current_id] = np.delete(self.coords[current_id], _idxs[i], axis=0)
+                self.meta['coords'][current_idx] = np.delete(self.meta['coords'][current_idx], _idxs[i], axis=0)
 
-        self.performSanityCheck()
-
-    def performSanityCheck(self):
-        # check that
-        return
+        self.updatePointMeta()
+    
+    def updatePointMeta(self):
+        for i, ps in enumerate( self.meta['coords'] ):
+            if ps.shape[0]>0:
+                self.meta['is_instance'][i] = 1
 
 class Canvas2D(FigureCanvas):
  
@@ -120,13 +123,7 @@ class Canvas2D(FigureCanvas):
 
         self.images_shown = self.axes.imshow(rgba_img)
 
-        colors = ['#6eadd8','#ff7f0e','red','#c4c4c4']
-        ms = [5,5,5,2]
-        marker = ['o','o','X','x']
-        self.points_scatter = []
-        for i in range(4):
-            line, = self.axes.plot([],[],' ',color=colors[i],ms=ms[i],marker=marker[i])
-            self.points_scatter.append(line)
+        self.points_scatter = [self.axes.plot([],[])[0]]
 
         self.axes.grid(False)
         self.axes.set_xticks([])
@@ -148,16 +145,15 @@ class Canvas2D(FigureCanvas):
         self.draw()
         self.flush_events()
 
-    def updateScatter(self, t, z, points):
-        i=0
-        for key, ps in points.items():
-            if ps.shape[0]!=0:
-                ps = ps[ps[:,2].astype(np.uint16)==z,:]
-                ps = ps[ps[:,3].astype(np.uint16)==t,:]
-                self.points_scatter[i].set_data(ps[:,0],ps[:,1])
-            else:
-                self.points_scatter[i].set_data([],[])
-            i+=1
+    def updateScatter(self, t, z, meta):
+        [l.remove() for l in self.points_scatter]
+        self.points_scatter = []
+        for i, ps in enumerate( meta['coords'] ):
+            if meta['is_instance'][i] == 1:
+                ps_plot = ps[ (ps[:,2].astype(np.uint16)==z), : ]
+                ps_plot = ps_plot[ (ps_plot[:,3].astype(np.uint16)==t) ,: ]
+                self.points_scatter.append( self.axes.plot(ps_plot[:,0],ps_plot[:,1],meta['markers'][i],
+                    color=meta['colors'][i],ms=meta['ms'][i])[0] )
 
         self.draw()
         self.flush_events()
@@ -183,17 +179,15 @@ class Canvas3D(FigureCanvas):
         FigureCanvas.updateGeometry(self)
  
  
-    def plot(self,data_id,data,n_ph):
-        ms = [3,3,5,1]
-        ls = [' o', ' o', ' X', '-x']
-        colors = ['#6eadd8','#ff7f0e','red','#c4c4c4']
+    def plot(self,meta,n_ph):
         self.axes.clear()
         for ph in range(n_ph):
-            for i, obj_id in enumerate( data_id ):
-                p = data[obj_id]
-                if p.shape[0] != 0:
+            for i, obj_id in enumerate( meta['_ids'] ):
+                if meta['is_instance'][i] == 1:
+                    p = meta['coords'][i]
                     p = p[p[:,3]==ph]
-                    self.axes.plot(p[:,0],p[:,1],p[:,2], ls[i],ms=ms[i],color=colors[i])
+                    self.axes.plot(p[:,0],p[:,1],p[:,2], meta['markers'][i],
+                        ms=meta['ms'][i],color=meta['colors'][i])
 
         self.draw()
         self.flush_events()
@@ -203,22 +197,24 @@ class Canvas3D(FigureCanvas):
 '''
 
 class ObjectDefiner(QDialog):
-    def __init__(self, parent=None, _ids=['object name']*4,
-                    colors = ['#6eadd8','#ff7f0e','red','#c4c4c4'], 
-                    markers = ['o','o','X','-x'],
-                    ms = [3,3,5,1]):
+    def __init__(self, parent=None, 
+                    objects = {'_ids': ['newobject']*4,
+                        'colors': ['#6eadd8','#ff7f0e','red','#c4c4c4'],
+                        'markers': ['o','o','X','-x'],
+                        'ms': [3,3,5,1],
+                        'is_instance': [0,0,0,0],
+                        'coords': [np.array([])]*4 }):
+
         super(ObjectDefiner, self).__init__(parent)
-        self.objects = { '_ids': _ids,
-                        'colors': colors,
-                        'markers': markers,
-                        'ms': ms }
+        self.objects = objects
+        self.outobjects = copy.deepcopy(self.objects)
 
         QApplication.setStyle('Macintosh')
 
         table = QTableWidget()
-        table.setRowCount(len(_ids))
-        table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker', 'Marker size'])
+        table.setRowCount(len(self.objects['_ids']))
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker', 'Marker size', 'are istances'])
         self.table = table
 
         addObj = QPushButton('Add object.')
@@ -246,29 +242,36 @@ class ObjectDefiner(QDialog):
         table.itemChanged.connect(self.changeObjects)
 
     def populateTable(self):
-        (_ids,colors,markers,ms) = self.unpackObjects()
+        (_ids,colors,markers,ms,n,coords) = self.unpackObjects()
         self.table.setRowCount(len(_ids))
         for i in range(len(_ids)):
             self.table.setItem(i,0, QTableWidgetItem(_ids[i]))
-            self.table.setItem(i, 1, QTableWidgetItem()); self.table.item(i,1).setBackground(QColor(colors[i]))
+            self.table.setItem(i,1, QTableWidgetItem()); self.table.item(i,1).setBackground(QColor(colors[i]))
             self.table.setItem(i,2, QTableWidgetItem(markers[i]))
             self.table.setItem(i,3, QTableWidgetItem(str(ms[i])))
+            
+        for j in range(self.table.rowCount()):
+            self.table.setItem(j,4, QTableWidgetItem(str(n[j])))
+            self.table.item(j,4).setFlags(Qt.ItemIsEnabled)
 
     def unpackObjects(self):
         return ( val for key, val in self.objects.items() )
 
     def changeObjects(self):
         self.objects['_ids'] = [self.table.item(i,0).text() for i in range(self.table.rowCount()) if self.table.item(i,0)]
+        self.objects['markers'] = [self.table.item(i,2).text() for i in range(self.table.rowCount()) if self.table.item(i,2)]
+        self.objects['ms'] = [self.table.item(i,3).text() for i in range(self.table.rowCount()) if self.table.item(i,3)]
+        self.objects['is_instance'] = [self.table.item(i,4).text() for i in range(self.table.rowCount()) if self.table.item(i,4)]
 
     def doubleClickEvent(self, click):
         if click.column() == 1:
             self.pickColor(click)
+            return
 
     def pickColor(self, click):
         color = QColorDialog.getColor()
         # self.table.item(i,1).setBackground(QColor(color))
-        self.colors[click.row()] = color.name()
-        # self.table.item(click.row(),click.column()).setBackground(QColor(color.name()))
+        self.objects['colors'][click.row()] = color.name()
         self.populateTable()
 
     def addObject(self):
@@ -277,27 +280,39 @@ class ObjectDefiner(QDialog):
             self.objects['colors'].append(self.objects['colors'][-1])
             self.objects['markers'].append(self.objects['markers'][-1])
             self.objects['ms'].append(self.objects['ms'][-1])
+            self.objects['is_instance'].append(0)
+            self.objects['coords'].append(np.array([]))
         else:
             self.objects['colors'] = ['#6eadd8']
             self.objects['markers'] = ['o']
             self.objects['ms'] = [3]
+            self.objects['is_instance'] = [0]
+            self.objects['coords'].append(np.array([]))
         self.populateTable()
 
     def removeObject(self):
         if len(self.objects['_ids'])>0:
-            self.objects['_ids'].pop()
-            self.objects['colors'].pop()
-            self.objects['markers'].pop()
-            self.objects['ms'].pop()
-            self.populateTable()
+            idxs = [i for i, x in enumerate(self.objects['is_instance']) if x == 0]
+            if len(idxs)>0:
+                i = idxs[-1]
+                self.objects['_ids'].pop(i)
+                self.objects['colors'].pop(i)
+                self.objects['markers'].pop(i)
+                self.objects['ms'].pop(i)
+                self.objects['is_instance'].pop(i)
+                self.objects['coords'].pop(i)
+                self.populateTable()
 
     def saveObjects(self):
         outobjects = {}
-        outobjects['_ids'] = [self.table.item(i,0).text() for i in range(self.table.rowCount()-1) if self.table.item(i,0)]
-        outobjects['colors'] = [self.table.item(i,1).text() for i in range(self.table.rowCount()-1)]
-        outobjects['markers'] = [self.table.item(i,2).text() for i in range(self.table.rowCount()-1) if self.table.item(i,2)]
-        outobjects['ms'] = [self.table.item(i,3).text() for i in range(self.table.rowCount()-1) if self.table.item(i,3)]
-        # return outobjects
+        outobjects['_ids'] = [self.table.item(i,0).text() for i in range(self.table.rowCount())]
+        outobjects['colors'] = [self.table.item(i,1).background().color().name() for i in range(self.table.rowCount())]
+        outobjects['markers'] = [self.table.item(i,2).text() for i in range(self.table.rowCount())]
+        outobjects['ms'] = [self.table.item(i,3).text() for i in range(self.table.rowCount())]
+        outobjects['is_instance'] = [int(self.table.item(i,4).text()) for i in range(self.table.rowCount())]
+        outobjects['coords'] = self.objects['coords']
+        self.outobjects = outobjects
+        super().accept()
 
 
 if __name__ == '__main__':

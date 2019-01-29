@@ -15,14 +15,18 @@ from tifffile import imread
 import pandas as pd
 import os, pickle, time
 import utils as ut
+import copy
 
 class MyGUI(QDialog):
     def __init__(self, parent=None):
         super(MyGUI, self).__init__(parent)
 
-        self.points_id = ['tether_Atrium','tether_Ventricle','AVCanal','Midline']
-        self.points_colors = ['#1f77b4','#ff7f0e','black','grey']
-        self.points = ut.PointObjects(self.points_id)
+        self.points_meta = {'_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
+                            'colors': ['#1f77b4','#ff7f0e','black','grey'],
+                            'markers': ['o','o','X','-x'],
+                            'ms': [3,3,5,1],
+                            'is_instance': [0,0,0,0] }
+        self.points = ut.PointObjects(self.points_meta)
         self.file_name = ''
         self.stacks = np.zeros((10,10,2,512,1024))
         self.channels = ['channel 0', 'channel 1']
@@ -74,15 +78,17 @@ class MyGUI(QDialog):
     def createObjectsControlGroupBox(self):
         self.groupObjectsControl = QGroupBox("")
 
-        objectIDBox = QComboBox(); objectIDBox.addItems(self.points_id)
+        objectIDBox = QComboBox(); objectIDBox.addItems(self.points.meta['_ids'])
         objectLabel = QLabel("&Object ID:"); objectLabel.setBuddy(objectIDBox)  
 
-        # objectIDBox = QPushButton('Manage objects');
-        # objectLabel = QLabel("&Object ID:"); objectLabel.setBuddy(objectIDBox)  
+        objectManageButton = QPushButton('Manage objects');
+        objectManageButton.setFocusPolicy(Qt.NoFocus)
+        objectManageButton.clicked.connect(self.managePoints)
 
         layout = QGridLayout()
         layout.addWidget(objectLabel,0,0)
         layout.addWidget(objectIDBox,0,1)
+        layout.addWidget(objectManageButton,1,0,1,2)
 
         self.groupObjectsControl.setLayout(layout)
         self.groupObjectsControl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -203,7 +209,7 @@ class MyGUI(QDialog):
             self.TLabel.setText("&Contraction phase\n(0-%s)"%str(self.stacks.shape[0]))
             self.ZLabel.setText("&Z plane\n(0-%s)"%str(self.stacks.shape[1]))
 
-            self.widgets['groupCanvas3D'][0].plot(self.points_id,self.points.coords,self.stacks.shape[0])
+            self.widgets['groupCanvas3D'][0].plot(self.points.meta,self.stacks.shape[0])
 
             for i in range(self.stacks.shape[2]):
                 self.widgets['groupTZC'][i+3].setChecked(True)
@@ -220,7 +226,7 @@ class MyGUI(QDialog):
             else:
                 self.points.coords = pickle.load(open(new_file,'rb'))
                 (t, z, c) = self.getTZC()
-                self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.coords)
+                self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
                 self.updateCanvas3D()
 
     def saveData(self):
@@ -250,22 +256,29 @@ class MyGUI(QDialog):
         (t, z, c) = self.getTZC()
         # print('Current TZC: ',t,z)
         self.widgets['groupCanvas2D'][2].reshowImg(self.stacks[t,z], self.widgets['groupTZC'][3:], self.chVal)
-        self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.coords)
+        self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
 
     def updateCanvas3D(self):
         if not self.widgets['groupCanvas3D'][1].checkState():
             return
         (t, z, c) = self.getTZC()
-        point_plot = { _id: self.points.coords[_id] for _id in self.points_id }
+        meta = {key:[] for key in self.points.meta}
 
         # only show the current contraction phase
         if self.widgets['groupCanvas3D'][2].checkState():
-            for _id in self.points_id:
-                if point_plot[_id].shape[0] > 0:
-                    point_plot[_id] = point_plot[_id][point_plot[_id][:,3]==t]
+            for i, _id in enumerate( self.points.meta['_ids'] ):
+                if self.points.meta['is_instance'][i] == 1:
+                    meta['_ids'].append(_id)
+                    meta['coords'].append( self.points.meta['coords'][i][self.points.meta['coords'][i][:,3]==t] )
+                    meta['is_instance'].append(1)
+                    meta['markers'].append( self.points.meta['markers'][i] )
+                    meta['ms'].append( self.points.meta['ms'][i] )
+                    meta['colors'].append( self.points.meta['colors'][i] )
+        else:
+            meta = copy.deepcopy( self.points.meta )
 
         # update all lines
-        self.widgets['groupCanvas3D'][0].plot(self.points_id,point_plot,self.stacks.shape[0])
+        self.widgets['groupCanvas3D'][0].plot(meta,self.stacks.shape[0])
 
     def updateCcontrolled(self):
         (t, z, c) = self.getTZC()
@@ -315,11 +328,18 @@ class MyGUI(QDialog):
             (t, z, c) = self.getTZC()
             click_coord = np.array([np.rint(event.xdata),np.rint(event.ydata),z,t])
             self.points.updatePoints(self.widgets['groupObjects'][0].currentText(),click_coord,event)
-            self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.coords)
+            self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
             self.updateCanvas3D()
         self.press = False
         self.move = False
 
+    def managePoints(self):
+        input_objects = copy.deepcopy(self.points.meta)
+        w = ut.ObjectDefiner(objects = input_objects)
+        if w.exec_() == QDialog.Accepted:
+            self.points.meta = w.outobjects
+            self.widgets['groupObjects'][0].clear()
+            self.widgets['groupObjects'][0].addItems(self.points.meta['_ids'])
 # if __name__ == '__main__':
 
 import sys
