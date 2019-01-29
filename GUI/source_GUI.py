@@ -211,8 +211,8 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setValue(self._maxval[0,0])
 
-            self.TLabel.setText("&Contraction phase\n(0-%s)"%str(self.stacks.shape[0]))
-            self.ZLabel.setText("&Z plane\n(0-%s)"%str(self.stacks.shape[1]))
+            self.TLabel.setText("&Contraction phase\n(0-%s)"%str(self.stacks.shape[0]-1))
+            self.ZLabel.setText("&Z plane\n(0-%s)"%str(self.stacks.shape[1]-1))
 
             self.widgets['groupCanvas3D'][0].plot(self.points.meta,self.stacks.shape[0])
 
