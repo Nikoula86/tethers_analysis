@@ -76,7 +76,7 @@ class PointObjects():
 
             # now find the closest point to the click and remove it
             if len(_idxs) != 0:
-                dist = [ np.linalg.norm(c[:3]-c1) for c1 in points[:,:3] ]
+                dist = [ np.linalg.norm(coord[:3]-c1) for c1 in points[:,:3] ]
                 i = np.where(dist==np.min(dist))[0]
                 self.meta['coords'][current_idx] = np.delete(self.meta['coords'][current_idx], _idxs[i], axis=0)
 
