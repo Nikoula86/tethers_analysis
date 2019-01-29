@@ -146,7 +146,6 @@ class Overview(QTableWidget):
         self.setColumnCount(len(meta['_ids']))
         self.setHorizontalHeaderLabels(meta['_ids'])
         self.setTableWidth()
-
     def setTableWidth(self):
         width = self.verticalHeader().width()
         width += self.horizontalHeader().length()

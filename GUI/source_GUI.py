@@ -238,7 +238,7 @@ class MyGUI(QDialog):
                     self.points.meta = ut.convertPoints(self.points.meta)
                 self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
                 self.updateCanvas3D()
-                self.widgets['groupCanvas3D'][3].populateTable(self.points.meta)
+                self.widgets['groupCanvas3D'][3].populateTable(meta=self.points.meta,n_ph=self.stacks.shape[0])
 
     def saveData(self):
         save_file_name, _ = QFileDialog.getSaveFileName(self,"Save file")
