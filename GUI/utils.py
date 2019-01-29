@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication, QTableWidget, QVBoxLayout,
-                            QPushButton, QColorDialog)
-from PyQt5.QtGui import QCursor
+                            QPushButton, QColorDialog, QTableWidgetItem)
+from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
 
@@ -203,36 +203,101 @@ class Canvas3D(FigureCanvas):
 '''
 
 class ObjectDefiner(QDialog):
-    def __init__(self, parent=None, points={}, 
+    def __init__(self, parent=None, _ids=['object name']*4,
                     colors = ['#6eadd8','#ff7f0e','red','#c4c4c4'], 
                     markers = ['o','o','X','-x'],
                     ms = [3,3,5,1]):
         super(ObjectDefiner, self).__init__(parent)
+        self.objects = { '_ids': _ids,
+                        'colors': colors,
+                        'markers': markers,
+                        'ms': ms }
 
         QApplication.setStyle('Macintosh')
 
         table = QTableWidget()
-        table.setRowCount(len(points.keys())+1)
-        table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker'])
+        table.setRowCount(len(_ids))
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(['Object name', 'Color', 'Marker', 'Marker size'])
+        self.table = table
 
-        pickColor = QPushButton('Pick a color.')
-        pickColor.setFocusPolicy(Qt.NoFocus)
-        pickColor.clicked.connect(self.pickColor)
+        addObj = QPushButton('Add object.')
+        addObj.setFocusPolicy(Qt.NoFocus)
+        addObj.clicked.connect(self.addObject)
+
+        removeObj = QPushButton('Remove object.')
+        removeObj.setFocusPolicy(Qt.NoFocus)
+        removeObj.clicked.connect(self.removeObject)
+
+        saveButton = QPushButton('Save objects.')
+        saveButton.setFocusPolicy(Qt.NoFocus)
+        saveButton.clicked.connect(self.saveObjects)
 
         layout = QVBoxLayout()
         layout.addWidget(table) 
-        layout.addWidget(pickColor)
+        layout.addWidget(addObj)        
+        layout.addWidget(removeObj)        
+        layout.addWidget(saveButton)
 
         self.setLayout(layout)
 
+        self.populateTable()
+        table.doubleClicked.connect(self.doubleClickEvent)
+        table.itemChanged.connect(self.changeObjects)
+
     def populateTable(self):
-        for key in points:
-            return
+        (_ids,colors,markers,ms) = self.unpackObjects()
+        self.table.setRowCount(len(_ids))
+        for i in range(len(_ids)):
+            self.table.setItem(i,0, QTableWidgetItem(_ids[i]))
+            self.table.setItem(i, 1, QTableWidgetItem()); self.table.item(i,1).setBackground(QColor(colors[i]))
+            self.table.setItem(i,2, QTableWidgetItem(markers[i]))
+            self.table.setItem(i,3, QTableWidgetItem(str(ms[i])))
 
+    def unpackObjects(self):
+        return ( val for key, val in self.objects.items() )
 
-    def pickColor(self):
+    def changeObjects(self):
+        self.objects['_ids'] = [self.table.item(i,0).text() for i in range(self.table.rowCount()) if self.table.item(i,0)]
+
+    def doubleClickEvent(self, click):
+        if click.column() == 1:
+            self.pickColor(click)
+
+    def pickColor(self, click):
         color = QColorDialog.getColor()
+        # self.table.item(i,1).setBackground(QColor(color))
+        self.colors[click.row()] = color.name()
+        # self.table.item(click.row(),click.column()).setBackground(QColor(color.name()))
+        self.populateTable()
+
+    def addObject(self):
+        self.objects['_ids'].append('newobject')
+        if len(self.objects['colors'])>0:
+            self.objects['colors'].append(self.objects['colors'][-1])
+            self.objects['markers'].append(self.objects['markers'][-1])
+            self.objects['ms'].append(self.objects['ms'][-1])
+        else:
+            self.objects['colors'] = ['#6eadd8']
+            self.objects['markers'] = ['o']
+            self.objects['ms'] = [3]
+        self.populateTable()
+
+    def removeObject(self):
+        if len(self.objects['_ids'])>0:
+            self.objects['_ids'].pop()
+            self.objects['colors'].pop()
+            self.objects['markers'].pop()
+            self.objects['ms'].pop()
+            self.populateTable()
+
+    def saveObjects(self):
+        outobjects = {}
+        outobjects['_ids'] = [self.table.item(i,0).text() for i in range(self.table.rowCount()-1) if self.table.item(i,0)]
+        outobjects['colors'] = [self.table.item(i,1).text() for i in range(self.table.rowCount()-1)]
+        outobjects['markers'] = [self.table.item(i,2).text() for i in range(self.table.rowCount()-1) if self.table.item(i,2)]
+        outobjects['ms'] = [self.table.item(i,3).text() for i in range(self.table.rowCount()-1) if self.table.item(i,3)]
+        # return outobjects
 
 
 if __name__ == '__main__':
