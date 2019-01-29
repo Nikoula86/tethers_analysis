@@ -253,6 +253,7 @@ class ObjectDefiner(QDialog):
         self.populateTable()
         table.doubleClicked.connect(self.doubleClickEvent)
         table.itemChanged.connect(self.changeObjects)
+        self.setWindowTitle('Objects Editor')
         self.setTableWidth()
 
     def setTableWidth(self):
