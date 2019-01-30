@@ -12,14 +12,15 @@ import copy, re, sys
 from ast import literal_eval
 import subWindows as sw
 
-def loadStacks5D(file_name):
+def loadStacks5D(file_name, app=False):
     print('#'*40)
     print('Loading dataset at:\n\t', file_name)
     stacks = imread(file_name)
     target_id = 'TZCHW'
 
     # append dimensions if necessary
-    app = QApplication(sys.argv)
+    if not app:
+        app = QApplication(sys.argv)
     ddef = sw.DimensionDefiner(shape=stacks.shape)
     ddef.show()
     if ddef.exec_() == QDialog.Accepted:
@@ -36,12 +37,13 @@ def loadStacks5D(file_name):
         return
 
     # reorder dimensions to match 'TZCHW'
-    for i in target_id:
-        f = input_id.index(i)
-        t = target_id.index(i)
-        stacks = np.moveaxis(stacks,f,t)
-        input_id = input_id.replace(i,'')
-        input_id = input_id[:t]+i+input_id[t:]
+    if input_id != target_id:
+        for i in target_id:
+            f = input_id.index(i)
+            t = target_id.index(i)
+            stacks = np.moveaxis(stacks,f,t)
+            input_id = input_id.replace(i,'')
+            input_id = input_id[:t]+i+input_id[t:]
 
     # compute maximum values
     _maxval = np.zeros((stacks.shape[0],stacks.shape[2]))
