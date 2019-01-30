@@ -8,13 +8,42 @@ from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication, QTableWidget, Q
 from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
-import copy, re
+import copy, re, sys
 from ast import literal_eval
+import subWindows as sw
 
-def loadStacks(file_name):
+def loadStacks5D(file_name):
     print('#'*40)
     print('Loading dataset at:\n\t', file_name)
-    stacks = imread(file_name)[:,:,::-1,:,:]
+    stacks = imread(file_name)
+    target_id = 'TZCHW'
+
+    # append dimensions if necessary
+    app = QApplication(sys.argv)
+    ddef = sw.DimensionDefiner(shape=stacks.shape)
+    ddef.show()
+    if ddef.exec_() == QDialog.Accepted:
+        input_id = ddef.text
+        # find the missing id
+        missing_id = copy.deepcopy(target_id)
+        for i in input_id:
+            missing_id = missing_id.replace(i,'')
+        # append dimension
+        for i in range(len(target_id)-len(input_id)):
+            stacks = np.expand_dims(stacks,-1)
+            input_id = input_id+missing_id[i]
+    else:
+        return
+
+    # reorder dimensions to match 'TZCHW'
+    for i in target_id:
+        f = input_id.index(i)
+        t = target_id.index(i)
+        stacks = np.moveaxis(stacks,f,t)
+        input_id = input_id.replace(i,'')
+        input_id = input_id[:t]+i+input_id[t:]
+
+    # compute maximum values
     _maxval = np.zeros((stacks.shape[0],stacks.shape[2]))
     for i in range(stacks.shape[0]):
         for j in range(stacks.shape[2]):
@@ -42,3 +71,7 @@ def convertPoints(oldData):
             new['is_instance'][i] = 1
     return new
 
+if __name__ == '__main__':
+
+    f = '../test_unwrap_heart/4D_merged_small.tif'
+    loadStacks5D(f)

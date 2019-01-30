@@ -219,7 +219,7 @@ class MyGUI(QDialog):
         if new_file != '':
             self.setEnableState(True)
             self.file_name = new_file
-            self.stacks, self._maxval = ut.loadStacks(self.file_name)
+            self.stacks, self._maxval = ut.loadStacks5D(self.file_name)
 
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
