@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from tqdm import tqdm
 from time import time
-import glob, os, sys, pickle
+import glob, os, sys, pickle, copy
 
 def vector(p1,p2):
 
@@ -55,6 +55,7 @@ class Midline(object):
             self.coords_anchors[:,0] *= self.pxlsize[0]
             self.coords_anchors[:,1] *= self.pxlsize[1]
             self.coords_anchors[:,2] *= self.pxlsize[2]
+        self.coords_anchors = self.clean_up_points()
         
     #%% 
     def setup_figure(self, figsize=(10,5),viewpoint=(45,60),
@@ -88,6 +89,7 @@ class Midline(object):
 
         # select the midline in the specified contraction phase. If not specified, use the first one available
         centroid = np.copy(self.coords_anchors)
+
         if phase==-1:
             phase = np.min(centroid[:,3])
         centroid = centroid[centroid[:,3]==phase][:,:3]
@@ -151,6 +153,14 @@ class Midline(object):
 
         # plt.show()
         return n_points_spline, S, T, N, B
+
+    def clean_up_points(self):
+        coords = copy.deepcopy(self.coords_anchors)
+        new = np.array([coords[0]])
+        for c in coords[1:]:
+            if any( c!=new[-1] ):
+                new = np.concatenate((new,[c]))
+        return new
 
 class Tethers(object):
     
