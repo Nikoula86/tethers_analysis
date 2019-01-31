@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import (QDialog, QSizePolicy, QApplication, QTableWidget, QVBoxLayout,
-                            QPushButton, QColorDialog, QTableWidgetItem, QMessageBox)
+                            QPushButton, QColorDialog, QTableWidgetItem, QMessageBox,
+                            QMainWindow, QLineEdit, QLabel)
 from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
@@ -117,7 +118,7 @@ class ObjectEditor(QDialog):
                 if int(self.table.item(index,4).text()) == 0:
                     self.table.removeRow(index)
                 else:
-                    answer = QMessageBox.question(self, 'PyQt5 message', "The object \"%s\" has instances in the image. Are you sure you want to delete it?" %(self.table.item(index,0).text()))
+                    answer = QMessageBox.question(self, 'Warning!', "The object \"%s\" has instances in the image. Are you sure you want to delete it?" %(self.table.item(index,0).text()))
                     if answer == QMessageBox.Yes:
                         self.table.removeRow(index)
 
@@ -135,13 +136,48 @@ class ObjectEditor(QDialog):
         self.outobjects = outobjects
         super().accept()
 
+class DimensionDefiner(QDialog):
+ 
+    def __init__(self, parent = None, shape = (1,1,1)):
+        super(DimensionDefiner, self).__init__(parent)
+        self.setWindowTitle('Dimension definition')
+        self.shape = shape
+
+        lbl = QLabel('Image shape: %s.\nDimension id:'%str(shape),self)
+        lbl.move(28,5)
+
+        self.textbox = QLineEdit(self)
+        guess = 'TZCHW'[-len(shape):]
+        self.textbox.setText(guess)
+        self.textbox.move(28, 40)
+        self.textbox.resize(72,20)
+
+        button = QPushButton('Confirm', self)
+        button.move(20,60)
+        button.setFocusPolicy(Qt.NoFocus)
+        button.clicked.connect(self.on_click)
+        self.resize(190,100)
+
+    def on_click(self):
+        shape = self.shape
+        text = self.textbox.text().strip().upper()
+        if len(text) != len(shape):
+            QMessageBox.warning(self,'Warning!','Can\'t assign dimensions ids (%s) \nto shape %s...'%(text,str(shape)))
+        elif any([i not in 'TZCHW' for i in text]):
+            QMessageBox.warning(self,'Warning!','(%s) is an invalid dimension id.\nValid ids are \'TZCHW\''%(text))
+        elif any([text.count(_id)!=1 for _id in set(text)]):
+            QMessageBox.warning(self,'Warning!','(%s) is an invalid dimension id.\nDimension ids can\'t repeat!'%(text))
+        else:
+            self.text = text
+            super().accept()
+
 
 if __name__ == '__main__':
 
     import sys
 
     app = QApplication(sys.argv)
-    gallery = ObjectEditor()
+    gallery = DimensionDefiner()
     gallery.show()
     sys.exit(app.exec_()) 
 

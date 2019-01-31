@@ -1,10 +1,10 @@
 from PyQt5.QtGui import QCursor, QPixmap, QColor,QPainter
-from PyQt5.QtCore import QDateTime, Qt, QTimer
+from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QFileDialog, QMessageBox, QErrorMessage)
+        QVBoxLayout, QWidget, QFileDialog, QMessageBox, QErrorMessage, QSplitter)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -30,8 +30,8 @@ class MyGUI(QDialog):
                         'is_instance': [0,0,0,0],
                         'coords': [np.array([])]*4 })
         self.file_name = ''
-        self.stacks = np.zeros((10,10,2,512,1024))
-        self.channels = ['channel 0', 'channel 1']
+        self.stacks = np.zeros((3,3,2,512,1024))
+        self.channels = ['ch0', 'ch1']
         self.widgets = {}
 
         self.createLoadSaveGroupBox()
@@ -42,12 +42,23 @@ class MyGUI(QDialog):
 
         self.setEnableState(False)
 
-        mainLayout = QGridLayout()
-        mainLayout.addWidget(self.groupLoadSave, 0, 0, 1, 3)
-        mainLayout.addWidget(self.groupObjectsControl, 1, 0)
-        mainLayout.addWidget(self.groupTZCControl, 2, 0)
-        mainLayout.addWidget(self.groupCanvas2DBox, 1, 1, 2, 1)
-        mainLayout.addWidget(self.groupCanvas3DBox, 1, 2, 2, 1)
+        mainLayout = QVBoxLayout()
+
+        split3 = QSplitter(Qt.Vertical)
+        split3.setMinimumWidth(0)
+
+        split1 = QSplitter(Qt.Horizontal)
+        split2 = QSplitter(Qt.Horizontal)
+
+        split3.addWidget(self.groupObjectsControl)
+        split3.addWidget(self.groupTZCControl)
+        split2.addWidget(self.groupCanvas2DBox)
+        split2.addWidget(self.groupCanvas3DBox)
+        split1.addWidget(split3)
+        split1.addWidget(split2)
+
+        mainLayout.addWidget(self.groupLoadSave)
+        mainLayout.addWidget(split1)
 
         self.setLayout(mainLayout)
         self.resize(1.2*960, 1.2*413)
@@ -82,7 +93,7 @@ class MyGUI(QDialog):
         self.groupObjectsControl = QGroupBox("")
 
         objectIDBox = QComboBox(); objectIDBox.addItems(self.points.meta['_ids'])
-        objectLabel = QLabel("&Object ID:"); objectLabel.setBuddy(objectIDBox)  
+        objectLabel = QLabel("&Object:"); objectLabel.setBuddy(objectIDBox) 
 
         objectManageButton = QPushButton('Manage objects');
         objectManageButton.setFocusPolicy(Qt.NoFocus)
@@ -92,35 +103,43 @@ class MyGUI(QDialog):
         layout.addWidget(objectLabel,0,0)
         layout.addWidget(objectIDBox,0,1)
         layout.addWidget(objectManageButton,1,0,1,2)
-
         self.groupObjectsControl.setLayout(layout)
-        self.groupObjectsControl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.groupObjectsControl.setMaximumWidth(300)
+        objectIDBox.setMaximumWidth(100)
+
         self.widgets['groupObjects'] = [objectIDBox]
 
     def createTZCControlGroupBox(self):
         self.groupTZCControl = QGroupBox("")
+        self.groupTZCControl.setMinimumWidth(0)
 
         TBox = QSpinBox(); TBox.setValue(0)
-        self.TLabel = QLabel("&Contraction phase\n(0-?)"); self.TLabel.setBuddy(TBox)
-        TBox.setKeyboardTracking(False)
+        self.TLabel = QLabel("&Time\n(0-?)"); self.TLabel.setBuddy(TBox)
+        self.TLabel.setMinimumWidth(0)
+        TBox.setMinimumWidth(0)
         TBox.valueChanged.connect(self.updateCanvas2D)
 
         ZBox = QSpinBox(); ZBox.setValue(0)
         self.ZLabel = QLabel("&Z plane\n(0-?)"); self.ZLabel.setBuddy(ZBox)
-        ZBox.setKeyboardTracking(False)
+        self.ZLabel.setMinimumSize(QSize(0, 0))
+        ZBox.setMinimumWidth(0)
         ZBox.valueChanged.connect(self.updateCanvas2D)
 
         CBox = QComboBox(); CBox.addItems(self.channels)
         CLabel = QLabel("&Channel:"); CLabel.setBuddy(CBox)
+        CLabel.setMinimumWidth(0)
+        CBox.setMinimumWidth(0)
         CBox.currentIndexChanged.connect(self.updateCcontrolled)
         
-        swapChannelButton = QPushButton("Swap channel colors")
+        swapChannelButton = QPushButton("Swap channels")
         swapChannelButton.setFocusPolicy(Qt.NoFocus)
         swapChannelButton.clicked.connect(self.swapColors)
+        swapChannelButton.setMinimumWidth(0)
 
         chBox = [ QCheckBox(ch) for ch in self.channels ]
         [ box.stateChanged.connect(self.updateCanvas2D) for box in chBox ]
         [ box.setCheckState(False) for box in chBox ]
+        [ box.setMinimumWidth(0) for box in chBox ]
         self.chVal = [ [0,2**16-1] for ch in self.channels ]
 
         layout = QGridLayout()
@@ -130,8 +149,8 @@ class MyGUI(QDialog):
         layout.addWidget(swapChannelButton,3,0,1,2);
         for i, b in enumerate( chBox ):
             layout.addWidget(b,i+4,0)
-
         self.groupTZCControl.setLayout(layout)
+
         self.widgets['groupTZC'] = [TBox,ZBox,CBox,*chBox]
 
     def createCanvas2DGroupBox(self):
@@ -169,7 +188,7 @@ class MyGUI(QDialog):
         self.groupCanvas3DBox = QGroupBox("")
 
         isplot = QCheckBox('Show live 3D plot')
-        isphase = QCheckBox('Show only current contraction phase')
+        isphase = QCheckBox('Show only current time')
         canvas3D = sc.Canvas3D(self, width=2, height=2)
         overview = sc.Overview(self, meta=self.points.meta, n_ph=self.stacks.shape[0])
 
@@ -179,9 +198,6 @@ class MyGUI(QDialog):
         layout.addWidget(canvas3D,2,0)
         layout.addWidget(overview,3,0)
 
-        sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
-        self.groupCanvas3DBox.heightForWidth(1)
-        canvas3D.setSizePolicy(sp)
         self.groupCanvas3DBox.setLayout(layout)
         self.widgets['groupCanvas3D'] = [canvas3D,isplot,isphase,overview]
 
@@ -201,9 +217,9 @@ class MyGUI(QDialog):
             QMessageBox.warning(self,'Warning, invalid input file!','Only \".tif\"" file implemented so far')
             return
         if new_file != '':
-            self.setEnableState(True)
             self.file_name = new_file
-            self.stacks, self._maxval = ut.loadStacks(self.file_name)
+            self.stacks, self._maxval = ut.loadStacks5D(self.file_name, app=True)
+            self.setEnableState(True)
 
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
@@ -211,7 +227,7 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][1].setMaximum(self._maxval[0,0])
             self.widgets['groupCanvas2D'][1].setValue(self._maxval[0,0])
 
-            self.TLabel.setText("&Contraction phase\n(0-%s)"%str(self.stacks.shape[0]-1))
+            self.TLabel.setText("&Time\n(0-%s)"%str(self.stacks.shape[0]-1))
             self.ZLabel.setText("&Z plane\n(0-%s)"%str(self.stacks.shape[1]-1))
 
             self.widgets['groupCanvas3D'][0].plot(self.points.meta,self.stacks.shape[0])
@@ -349,10 +365,13 @@ class MyGUI(QDialog):
         input_objects = copy.deepcopy(self.points.meta)
         w = sw.ObjectEditor(objects = input_objects)
         if w.exec_() == QDialog.Accepted:
+            # save new objects and remember previous selection
             self.points.meta = w.outobjects
             obj_id = self.widgets['groupObjects'][0].currentText()
+            # repopulate list of objects combobox
             self.widgets['groupObjects'][0].clear()
             self.widgets['groupObjects'][0].addItems(self.points.meta['_ids'])
+            # restore previous selection if possible
             if obj_id in self.points.meta['_ids']:
                 idx = self.points.meta['_ids'].index(obj_id)
                 self.widgets['groupObjects'][0].setCurrentIndex(idx)

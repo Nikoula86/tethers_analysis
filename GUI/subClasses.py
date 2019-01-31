@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import (QWidget, QDialog, QSizePolicy, QApplication, QTableWidget, QVBoxLayout,
-                            QPushButton, QColorDialog, QTableWidgetItem, QMessageBox)
+                            QPushButton, QColorDialog, QTableWidgetItem, QMessageBox, QAbstractScrollArea)
 from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
@@ -108,7 +108,7 @@ class Canvas3D(FigureCanvas):
  
         FigureCanvas.__init__(self, fig)
         self.axes = self.figure.add_subplot(111, projection='3d')
-        fig.subplots_adjust(left=0.,bottom=0.,right=1.,top=1.)
+        fig.subplots_adjust(left=.02,bottom=.1,right=.93,top=1.)
         self.axes.grid(False)
         self.setParent(parent)
         self.axes.set_xlim(auto=True)
@@ -146,7 +146,7 @@ class Canvas3D(FigureCanvas):
         self.flush_events()
 
 class Overview(QTableWidget):
-    def __init__(self, parent = None, n_ph = 100, meta = {'_ids': ['newobject']*4,
+    def __init__(self, parent = None, n_ph = 5, meta = {'_ids': ['newobject']*4,
                         'colors': ['#6eadd8','#ff7f0e','red','#c4c4c4'],
                         'markers': ['o','o','X','-x'],
                         'ms': [3,3,5,1],
@@ -157,14 +157,6 @@ class Overview(QTableWidget):
         self.setRowCount(n_ph)
         self.setColumnCount(len(meta['_ids']))
         self.setHorizontalHeaderLabels(meta['_ids'])
-        self.setTableWidth()
-    def setTableWidth(self):
-        width = self.verticalHeader().width()
-        width += self.horizontalHeader().length()
-        if self.verticalScrollBar().isVisible():
-            width += self.verticalScrollBar().width()
-        width += self.frameWidth() * 2
-        self.setFixedWidth(width)
     
     def populateTable(self, n_ph, meta):
         self.setRowCount(n_ph)
