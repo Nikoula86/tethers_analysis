@@ -48,7 +48,8 @@ class Midline(object):
     def __init__(self, coords_file):
         self.coords_file = coords_file
         self.pxlsize = [0.41, 0.41, 2.]
-        self.coords_anchors = pickle.load(open(coords_file,'rb'))['Midline']
+        pfile = pickle.load(open(coords_file,'rb'))
+        self.coords_anchors = { v[0]: v[1] for v in zip(pfile['_ids'],pfile['coords']) }['Midline']
         # adjust pixel size
         if self.coords_anchors.shape[0] > 0:
             self.coords_anchors[:,0] *= self.pxlsize[0]
@@ -156,7 +157,8 @@ class Tethers(object):
     def __init__(self, coords_file):
         self.coords_file = coords_file
         self.pxlsize = [0.41, 0.41, 2.]
-        self.coords_anchors = pickle.load(open(coords_file,'rb'))
+        pfile = pickle.load(open(coords_file,'rb'))
+        self.coords_anchors = { v[0]: v[1] for v in zip(pfile['_ids'],pfile['coords']) }
         # adjust pixel size
         for _id in self.coords_anchors.keys():
             if self.coords_anchors[_id].shape[0] > 0:
@@ -330,7 +332,7 @@ class Tethers(object):
 
 method = 'pt'               # 'fs' OR 'pt'
 color_code = 'phase_dep'    # 'chamber_dep' OR 'phase_dep'
-tethers = Tethers('test_unwrap_heart/5D_merged_points.p')
+tethers = Tethers('test_unwrap_heart/5D_merged_small_points.p')
 tethers.plot_XYZ_all_phases(method=method)
 tethers.plot_SAP_all_phases(color_code=color_code, method=method)
 
