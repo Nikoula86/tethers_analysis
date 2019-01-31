@@ -209,6 +209,9 @@ class Tethers(object):
         ax.quiver(S[::show_step,0],S[::show_step,1],S[::show_step,2], 
             N[::show_step,0],N[::show_step,1],N[::show_step,2],
             color='b',length=5,lw=1)
+        ax.quiver(S[::show_step,0],S[::show_step,1],S[::show_step,2], 
+            B[::show_step,0],B[::show_step,1],B[::show_step,2],
+            color='r',length=5,lw=1)
         if setlims:
             ax.set_xlim(xlim)
             ax.set_ylim(ylim)
