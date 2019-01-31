@@ -9,6 +9,7 @@ Bugs/things that could be improved:
 - make exe
 - implement click delay (0.5 sec?) to prevent double overlapping points
 - solve error message when closing dimensiondefiner window with X
+- use same color/marker for analysis scripts as for GUI
 
 Documentation:
 - open terminal in the folder where "source_GUI.py" is and type ">> python source_GUI.py" to launch the application
