@@ -147,6 +147,8 @@ class DimensionDefiner(QDialog):
         lbl.move(28,5)
 
         self.textbox = QLineEdit(self)
+        guess = 'TZCHW'[-len(shape):]
+        self.textbox.setText(guess)
         self.textbox.move(28, 40)
         self.textbox.resize(72,20)
 
