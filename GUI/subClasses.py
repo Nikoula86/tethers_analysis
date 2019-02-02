@@ -23,6 +23,9 @@ class Canvas2D(FigureCanvas):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         fig.subplots_adjust(left=0.,bottom=0.,right=1.,top=1.)
+
+        self.press = False
+        self.move = False
  
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
@@ -33,17 +36,23 @@ class Canvas2D(FigureCanvas):
         FigureCanvas.updateGeometry(self)
         # self.gray2rgb(data=data)
         self.initialize(data=data)
+        self.mpl_connect('button_press_event', self.onpress)
         self.mpl_connect('motion_notify_event', self.hover)
         self.cursor = self.axes.plot([0], [0], visible=False, marker = '+',color='white',ms=10000,lw=.5,alpha=.5)[0]
         self.cmaps = [ LinearSegmentedColormap.from_list('mycmap1', ['black', 'aqua'],N=2**16-1),
                         LinearSegmentedColormap.from_list('mycmap2', ['black', 'red'],N=2**16-1) ]
         
 
+    def onpress(self,event):
+        self.start = time.time()
+        self.press = True
+
     def leaveEvent(self, QEvent):
         QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
-        pass
 
     def hover(self, event):
+        if self.press:
+            self.move = True
         if event.inaxes == self.axes:
             QApplication.setOverrideCursor(QCursor(Qt.BlankCursor))
             self.cursor.set_data([event.xdata], [event.ydata])
@@ -126,7 +135,10 @@ class Canvas3D(FigureCanvas):
         policy.setHeightForWidth(True)
         self.setSizePolicy(policy)
         FigureCanvas.updateGeometry(self)
- 
+    
+    def leaveEvent(self, QEvent):
+        return
+
     def heightForWidth(self, width):
         return width 
 
