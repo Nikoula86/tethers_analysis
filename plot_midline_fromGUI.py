@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from tqdm import tqdm
 from time import time
-import glob, os, sys, pickle
+import glob, os, sys, pickle, copy
 
 def vector(p1,p2):
 
@@ -48,12 +48,14 @@ class Midline(object):
     def __init__(self, coords_file):
         self.coords_file = coords_file
         self.pxlsize = [0.41, 0.41, 2.]
-        self.coords_anchors = pickle.load(open(coords_file,'rb'))['Midline']
+        pfile = pickle.load(open(coords_file,'rb'))
+        self.coords_anchors = { v[0]: v[1] for v in zip(pfile['_ids'],pfile['coords']) }['Midline']
         # adjust pixel size
         if self.coords_anchors.shape[0] > 0:
             self.coords_anchors[:,0] *= self.pxlsize[0]
             self.coords_anchors[:,1] *= self.pxlsize[1]
             self.coords_anchors[:,2] *= self.pxlsize[2]
+        self.coords_anchors = self.clean_up_points()
         
     #%% 
     def setup_figure(self, figsize=(10,5),viewpoint=(45,60),
@@ -87,6 +89,7 @@ class Midline(object):
 
         # select the midline in the specified contraction phase. If not specified, use the first one available
         centroid = np.copy(self.coords_anchors)
+
         if phase==-1:
             phase = np.min(centroid[:,3])
         centroid = centroid[centroid[:,3]==phase][:,:3]
@@ -151,12 +154,21 @@ class Midline(object):
         # plt.show()
         return n_points_spline, S, T, N, B
 
+    def clean_up_points(self):
+        coords = copy.deepcopy(self.coords_anchors)
+        new = np.array([coords[0]])
+        for c in coords[1:]:
+            if any( c!=new[-1] ):
+                new = np.concatenate((new,[c]))
+        return new
+
 class Tethers(object):
     
     def __init__(self, coords_file):
         self.coords_file = coords_file
         self.pxlsize = [0.41, 0.41, 2.]
-        self.coords_anchors = pickle.load(open(coords_file,'rb'))
+        pfile = pickle.load(open(coords_file,'rb'))
+        self.coords_anchors = { v[0]: v[1] for v in zip(pfile['_ids'],pfile['coords']) }
         # adjust pixel size
         for _id in self.coords_anchors.keys():
             if self.coords_anchors[_id].shape[0] > 0:
@@ -207,6 +219,9 @@ class Tethers(object):
         ax.quiver(S[::show_step,0],S[::show_step,1],S[::show_step,2], 
             N[::show_step,0],N[::show_step,1],N[::show_step,2],
             color='b',length=5,lw=1)
+        ax.quiver(S[::show_step,0],S[::show_step,1],S[::show_step,2], 
+            B[::show_step,0],B[::show_step,1],B[::show_step,2],
+            color='r',length=5,lw=1)
         if setlims:
             ax.set_xlim(xlim)
             ax.set_ylim(ylim)
@@ -330,7 +345,7 @@ class Tethers(object):
 
 method = 'pt'               # 'fs' OR 'pt'
 color_code = 'phase_dep'    # 'chamber_dep' OR 'phase_dep'
-tethers = Tethers('test_unwrap_heart/5D_merged_points.p')
+tethers = Tethers('test_unwrap_heart/5D_merged_small_points.p')
 tethers.plot_XYZ_all_phases(method=method)
 tethers.plot_SAP_all_phases(color_code=color_code, method=method)
 
