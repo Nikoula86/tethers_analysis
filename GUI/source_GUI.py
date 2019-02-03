@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QFileDialog, QMessageBox, QErrorMessage, QSplitter)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
@@ -163,22 +162,17 @@ class MyGUI(QDialog):
         minValSlider.setMaximum(2**16-1)
         canvas2D = sc.Canvas2D(self, width=10, height=5)
 
-        navi_toolbar = NavigationToolbar(canvas2D, self)
-        navi_toolbar.setFocusPolicy(Qt.NoFocus)
-        navi_toolbar.setMaximumHeight(30)
-
         layout = QGridLayout()
         layout.addWidget(minValSlider,1,0,1,1)
         layout.addWidget(maxValSlider,1,1,1,1)
         layout.addWidget(canvas2D,1,2,1,1)
-        layout.addWidget(navi_toolbar,0,2,1,1)
 
         self.groupCanvas2DBox.setLayout(layout)
         self.widgets['groupCanvas2D'] = [minValSlider,maxValSlider,canvas2D]
 
         minValSlider.valueChanged.connect(self.updateBCslider)
         maxValSlider.valueChanged.connect(self.updateBCslider)
-        canvas2D.mpl_connect('button_release_event', self.mouseClick)
+        canvas2D.figure.mpl_connect('button_release_event', self.mouseClick)
 
     def createCanvas3DGroupBox(self):
         self.groupCanvas3DBox = QGroupBox("")
