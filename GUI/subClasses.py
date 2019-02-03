@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QWidget, QDialog, QSizePolicy, QApplication, QTable
 from PyQt5.QtGui import QCursor, QColor
 from PyQt5.QtCore import Qt
 from matplotlib.colors import LinearSegmentedColormap
-import copy, re
+import copy, re, time
 import matplotlib as mpl
 from ast import literal_eval
 
@@ -34,33 +34,21 @@ class Canvas2D(FigureCanvas):
                 QSizePolicy.Expanding,
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
-        # self.gray2rgb(data=data)
         self.initialize(data=data)
         self.mpl_connect('button_press_event', self.onpress)
         self.mpl_connect('motion_notify_event', self.hover)
-        self.cursor = self.axes.plot([0], [0], visible=False, marker = '+',color='white',ms=10000,lw=.5,alpha=.5)[0]
         self.cmaps = [ LinearSegmentedColormap.from_list('mycmap1', ['black', 'aqua'],N=2**16-1),
                         LinearSegmentedColormap.from_list('mycmap2', ['black', 'red'],N=2**16-1) ]
-        
+        self.cursor = mpl.widgets.Cursor(self.axes,useblit=True,lw=1, alpha=.5)
+        self.setCursor(QCursor(Qt.BlankCursor))
 
     def onpress(self,event):
         self.start = time.time()
         self.press = True
 
-    def leaveEvent(self, QEvent):
-        QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
-
     def hover(self, event):
         if self.press:
             self.move = True
-        if event.inaxes == self.axes:
-            QApplication.setOverrideCursor(QCursor(Qt.BlankCursor))
-            self.cursor.set_data([event.xdata], [event.ydata])
-            self.cursor.set_visible(True)
-        else:
-            QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
-            self.cursor.set_visible(False)
-        self.draw()
  
     def initialize(self,data):
         if data == []:

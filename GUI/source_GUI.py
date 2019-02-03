@@ -178,7 +178,6 @@ class MyGUI(QDialog):
 
         minValSlider.valueChanged.connect(self.updateBCslider)
         maxValSlider.valueChanged.connect(self.updateBCslider)
-        # canvas2D.mpl_connect('motion_notify_event', self.onmove)
         canvas2D.mpl_connect('button_release_event', self.mouseClick)
 
     def createCanvas3DGroupBox(self):
@@ -333,12 +332,9 @@ class MyGUI(QDialog):
 
         self.updateCanvas2D()
 
-        # self.widgets['groupCanvas2D'][2].images_shown[c].set_clim([vmin,vmax])
-        # self.widgets['groupCanvas2D'][2].draw()
-
     def mouseClick(self, event):
-        lagtime = time.time() - self.canvas2d.start
-        if self.canvas2d.press and ( (not self.canvas2d.move) or (lagtime<.05) ):
+        lagtime = time.time() - self.widgets['groupCanvas2D'][2].start
+        if self.widgets['groupCanvas2D'][2].press and ( (not self.widgets['groupCanvas2D'][2].move) or (lagtime<.05) ):
             # print('Mouse clicked! ', event)
             obj_id = self.widgets['groupObjects'][0].currentText()
             (t, z, c) = self.getTZC()
@@ -347,8 +343,8 @@ class MyGUI(QDialog):
             self.widgets['groupCanvas2D'][2].updateScatter(t, z, self.points.meta)
             self.updateCanvas3D()
             self.widgets['groupCanvas3D'][3].populateTable(meta=self.points.meta, n_ph=self.stacks.shape[0])
-        self.canvas2d.ress = False
-        self.canvas2d.move = False
+        self.widgets['groupCanvas2D'][2].press = False
+        self.widgets['groupCanvas2D'][2].move = False
 
     def managePoints(self):
         input_objects = copy.deepcopy(self.points.meta)
