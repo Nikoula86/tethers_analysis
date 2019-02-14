@@ -210,7 +210,9 @@ class MyGUI(QDialog):
             self.file_name = new_file
             self.stacks, self._maxval = ut.loadStacks5D(self.file_name, app=True)
             self.setEnableState(True)
+            (t, z, c) = self.getTZC()
 
+            self.widgets['groupCanvas2D'][2].initialize(data=self.stacks[t,z])
             self.widgets['groupTZC'][0].setMaximum(self.stacks.shape[0]-1)
             self.widgets['groupTZC'][1].setMaximum(self.stacks.shape[1]-1)
             self.widgets['groupCanvas2D'][0].setMaximum(self._maxval[0,0])

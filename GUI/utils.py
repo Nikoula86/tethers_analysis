@@ -44,6 +44,10 @@ def loadStacks5D(file_name, app=False):
             stacks = np.moveaxis(stacks,f,t)
             input_id = input_id.replace(i,'')
             input_id = input_id[:t]+i+input_id[t:]
+            
+    # adjust channel dimension to 2
+    if stacks.shape[2]==1:
+      stacks = np.concatenate([stacks,np.zeros(stacks.shape)],axis=2)
 
     # compute maximum values
     _maxval = np.zeros((stacks.shape[0],stacks.shape[2]))

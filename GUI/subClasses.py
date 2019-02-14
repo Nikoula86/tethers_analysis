@@ -43,7 +43,7 @@ class Canvas2D(QWidget):
         layout.addWidget(figure)
         self.setLayout(layout)
 
-        self.initialize(data=data)
+#        self.initialize(data=data)
         self.figure.mpl_connect('button_press_event', self.onpress)
         self.figure.mpl_connect('motion_notify_event', self.hover)
         self.cmaps = [ LinearSegmentedColormap.from_list('mycmap1', ['black', 'aqua'],N=2**16-1),
@@ -61,10 +61,8 @@ class Canvas2D(QWidget):
             self.move = True
  
     def initialize(self,data):
-        if data == []:
-            data = np.zeros((2,512,1024))
-        if data == []:
-            data = np.zeros((2,512,1024))
+#        if data == []:
+#            data = np.zeros((2,512,1024))
         cmap1 = LinearSegmentedColormap.from_list('mycmap', ['black', 'aqua'])
         rgba_img = cmap1(data[0])[:,:,:3]
         cmap2 = LinearSegmentedColormap.from_list('mycmap', ['black', 'red'])
@@ -82,7 +80,7 @@ class Canvas2D(QWidget):
 
     def reshowImg(self, stacks, chButton, chVal):
         # print('Current TZC: ',t,z)
-        rgba_img = np.zeros((512,1024,3))
+        rgba_img = np.zeros((*stacks.shape[1:],3))
         for i, b in enumerate( chButton ):
             if b.checkState():
                 lims = chVal[i]
