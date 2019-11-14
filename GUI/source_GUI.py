@@ -18,8 +18,40 @@ import subWindows as sw
 import subClasses as sc
 import objects as obj
 
-class MyGUI(QDialog):
+class dimensionGUI(QDialog):
     def __init__(self, parent=None):
+        super(dimensionGUI, self).__init__(parent)
+        
+        self.hDim = QSpinBox(); 
+        self.hDim.setMinimum(0); self.hDim.setMaximum(4096);
+        self.hDim.setValue(1024)
+
+        self.vDim = QSpinBox(); 
+        self.vDim.setMinimum(0); self.vDim.setMaximum(4096);
+        self.vDim.setValue(512)
+
+        startButton = QPushButton("Start GUI")
+        startButton.clicked.connect(self.startGUI)
+
+        self.layout = QGridLayout()
+        
+        self.setWindowTitle('Define image dimension in the 2D screen plane.')
+        self.layout.addWidget(QLabel('horizontal dimension:'),1,0,1,1)
+        self.layout.addWidget(QLabel('vertical dimension:'),2,0,1,1)
+        self.layout.addWidget(self.hDim,1,1,1,1)
+        self.layout.addWidget(self.vDim,2,1,1,1)
+        self.layout.addWidget(startButton,3,0,1,2)
+
+        self.setLayout(self.layout)
+        
+    def startGUI(self):
+
+        self.m = MyGUI(self.hDim.value(),self.vDim.value())
+        self.m.show()
+        self.m.exec()
+
+class MyGUI(QDialog):
+    def __init__(self, h, v, parent=None):
         super(MyGUI, self).__init__(parent)
 
         self.points = obj.PointObjects({ '_ids': ['tether_Atrium','tether_Ventricle','AVCanal','Midline'],
@@ -29,7 +61,7 @@ class MyGUI(QDialog):
                         'is_instance': [0,0,0,0],
                         'coords': [np.array([])]*4 })
         self.file_name = ''
-        self.stacks = np.zeros((3,3,2,512,1024))
+        self.stacks = np.zeros((3,3,2,v,h))
         self.channels = ['ch0', 'ch1']
         self.widgets = {}
 
@@ -361,6 +393,6 @@ class MyGUI(QDialog):
 import sys
 
 app = QApplication(sys.argv)
-gallery = MyGUI()
+gallery = dimensionGUI()
 gallery.show()
 sys.exit(app.exec_()) 
